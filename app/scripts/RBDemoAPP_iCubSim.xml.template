@@ -1,0 +1,36 @@
+<application>
+    <name>RBDemoAPP_iCubSim</name>
+    <description>Reactive Behaviors Demo</description>
+    <authors>
+        <author email="matej.hoffmann@iit.it">Matej Hoffmann</author>
+        <author email="tanis.mar@iit.it">Tanis Mar</author>
+        <author email="giulia.pasquale@iit.it">Giulia Pasquale</author>
+        <author email="raffaello.camoriano@iit.it">Raffaello Camoriano</author>
+    </authors>
+    <module>
+        <name>handCtrl</name>
+        <parameters>--from icubSim_handCtrl_config.ini --hand_sequences_file icubSim_handCtrl_hand_sequences.ini </parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry>(Pos (x 870.00) (y 150.90))</geometry>
+    </module>
+    <module>
+        <name>reachCtrl</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry>(Pos (x 330.00) (y 30.90))</geometry>
+    </module>
+    <connection>
+        <from>/reachCtrl/handToBeClosed:o</from>
+        <to>/handCtrl/handToBeClosed:i</to>
+        <protocol>tcp+recv.portmonitor+script.lua+context.RBDemo+file.handCtrlMonitor</protocol>
+        <geometry>(Pos ((x 447.00) (y 109.00)) ((x 492.00) (y 49.00)) ((x 871.00) (y 169.00))  )</geometry>
+    </connection>
+    <connection>
+        <from external="true">Source</from>
+        <to>/handCtrl/handToBeClosed:i</to>
+        <protocol>tcp+recv.portmonitor+script.lua+context.RBDemo+file.handCtrlMonitor</protocol>
+        <geometry>(Pos ((x 417.50) (y 225.50)) ((x 433.00) (y 282.00)) ((x 871.00) (y 169.00))  )</geometry>
+    </connection>
+</application>

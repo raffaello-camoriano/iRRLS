@@ -1,0 +1,105 @@
+<application>
+    <name>RBDemoAPP</name>
+    <description>Reactive Behaviors Demo</description>
+    <authors>
+        <author email="matej.hoffmann@iit.it">Matej Hoffmann</author>
+        <author email="tanis.mar@iit.it">Tanis Mar</author>
+        <author email="giulia.pasquale@iit.it">Giulia Pasquale</author>
+        <author email="raffaello.camoriano@iit.it">Raffaello Camoriano</author>
+    </authors>
+    <module>
+        <name>contactPosRootConverter</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry>(Pos (x 348.00) (y 547.90))</geometry>
+    </module>
+    <module>
+        <name>handCtrl</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry>(Pos (x 987.00) (y 329.90))</geometry>
+    </module>
+    <module>
+        <name>nearThingsDetector</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry>(Pos (x 238.00) (y 222.90))</geometry>
+    </module>
+    <module>
+        <name>reachCtrl</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry>(Pos (x 600.00) (y 244.90))</geometry>
+    </module>
+    <module>
+        <name>yarpview</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix>/RBDemoAPP:yarpview:1</prefix>
+        <geometry>(Pos (x 592.00) (y 114.90))</geometry>
+    </module>
+    <connection>
+        <from external="true">/SFM/disp:o</from>
+        <to>/nearThingsDetector/disp:i</to>
+        <protocol>udp</protocol>
+        <geometry>(Pos ((x 163.00) (y 319.00)) ((x 108.00) (y 321.00)) ((x 239.00) (y 316.00))  )</geometry>
+    </connection>
+    <connection>
+        <from>/nearThingsDetector/img:o</from>
+        <to>/RBDemoAPP:yarpview:1/yarpview/img:i</to>
+        <protocol>udp</protocol>
+        <geometry>(Pos ((x 522.00) (y 193.00)) ((x 472.00) (y 253.00)) ((x 593.00) (y 133.00))  )</geometry>
+    </connection>
+    <connection>
+        <from>/nearThingsDetector/target:o</from>
+        <to>/reachCtrl/reachingTarget:i</to>
+        <protocol>tcp</protocol>
+        <geometry>(Pos ((x 526.00) (y 270.50)) ((x 472.00) (y 278.00)) ((x 601.00) (y 263.00))  )</geometry>
+    </connection>
+    <connection>
+        <from external="true">/skinManager/skin_events:o</from>
+        <to>/contactPosRootConverter/skin_events:i</to>
+        <protocol>tcp</protocol>
+        <geometry>(Pos ((x 270.50) (y 591.50)) ((x 213.00) (y 591.00)) ((x 349.00) (y 591.00))  )</geometry>
+    </connection>
+    <connection>
+        <from>/contactPosRootConverter/contact_pos:o</from>
+        <to>/handCtrl/handToBeClosed:i</to>
+        <protocol>tcp+recv.portmonitor+script.lua+context.RBDemo+file.handCtrlMonitor</protocol>
+        <geometry>(Pos ((x 570.50) (y 457.00)) ((x 622.00) (y 566.00)) ((x 988.00) (y 348.00))  )</geometry>
+    </connection>
+    <connection>
+        <from>/reachCtrl/handToBeClosed:o</from>
+        <to>/handCtrl/handToBeClosed:i</to>
+        <protocol>tcp+recv.portmonitor+script.lua+context.RBDemo+file.handCtrlMonitor</protocol>
+        <geometry>(Pos ((x 640.50) (y 305.50)) ((x 762.00) (y 263.00)) ((x 988.00) (y 348.00))  )</geometry>
+    </connection>
+    <connection>
+        <from>/nearThingsDetector/target:o</from>
+        <to external="true">/iKinGazeCtrl/xd:i</to>
+        <protocol>tcp+recv.portmonitor+script.lua+context.RBDemo+file.gazeCtrlMonitorObject</protocol>
+        <geometry>(Pos ((x 324.50) (y 343.50)) ((x 472.00) (y 278.00)) ((x 696.00) (y 408.00))  )</geometry>
+    </connection>
+    <connection>
+        <from>/contactPosRootConverter/contact_pos:o</from>
+        <to external="true">/iKinGazeCtrl/xd:i</to>
+        <protocol>tcp+recv.portmonitor+script.lua+context.RBDemo+file.gazeCtrlMonitorTouch</protocol>
+        <geometry>(Pos ((x 403.00) (y 487.50)) ((x 622.00) (y 566.00)) ((x 696.00) (y 408.00))  )</geometry>
+    </connection>
+    <connection>
+        <from external="true">/icub/camcalib/left/out</from>
+        <to>/nearThingsDetector/imLeft:i</to>
+        <protocol>udp</protocol>
+        <geometry>(Pos ((x 205.00) (y 258.00)) ((x 192.00) (y 249.00)) ((x 239.00) (y 266.00))  )</geometry>
+    </connection>
+    <connection>
+        <from external="true">/icub/camcalib/right/out</from>
+        <to>/nearThingsDetector/imRight:i</to>
+        <protocol>udp</protocol>
+        <geometry>(Pos ((x 209.00) (y 289.50)) ((x 200.00) (y 287.00)) ((x 239.00) (y 291.00))  )</geometry>
+    </connection>
+</application>

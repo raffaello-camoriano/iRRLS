@@ -1,0 +1,58 @@
+<application>
+
+    <!-- Generic information-->
+    <name>RBDemo</name>
+    <description>Reactive Behaviors Demo</description>
+    <authors>
+        <author email="matej.hoffmann@iit.it">Matej Hoffmann</author>
+        <author email="tanis.mar@iit.it">Tanis Mar</author>
+        <author email="giulia.pasquale@iit.it">Giulia Pasquale</author>
+        <author email="raffaello.camoriano@iit.it">Raffaello Camoriano</author>
+    </authors>
+    
+    <dependencies>
+        <!-- touchDetector -->    
+        <port>/skinManager/skin_events:o</port>
+        
+        <!-- handCtrl -->
+        <port>/touchDetector/contact_pos:o</port>
+        <port>/reachModule/handToBeClosed:o</port>        
+    </dependencies>
+
+ 
+    <!-- Required modules. -->
+    
+    <!-- touchDetector -->
+    <module>
+        <name>touchDetector</name>
+        <node>localhost</node>
+        <tag>touchDetectorTag</tag>
+    </module>
+
+    <!-- handCtrl -->
+    <module>
+        <name>handCtrl</name>
+        <node></node>
+        <tag>handCtrlTag</tag>
+    </module>
+
+    <!-- Required connections -->    
+    <connection>
+        <from>/skinManager/skin_events:o</from>
+        <to>/touchDetector/contacts:i</to>
+        <protocol>tcp</protocol>
+    </connection>
+
+    <connection>
+        <from>/touchDetector/contact_pos:o</from>
+        <to>/handCtrl/handToBeClosed:i</to>
+        <protocol>tcp+recv.portmonitor+script.lua+context.RBDemo+file.handCtrlMonitor</protocol>
+    </connection>
+
+    <connection>
+        <from>/reachModule/handToBeClosed:o</from>
+        <to>/handCtrl/handToBeClosed:i</to>
+        <protocol>tcp+recv.portmonitor+script.lua+context.RBDemo+file.handCtrlMonitor</protocol>
+    </connection>
+        
+</application>

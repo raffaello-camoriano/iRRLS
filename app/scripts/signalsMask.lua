@@ -1,20 +1,45 @@
 --
 -- Copyright (C) 2014 IIT iCub Facility
--- Author: Tanis Mar
+-- Author: Raffaello Camoriano
 -- CopyPolicy: Released under the terms of the LGPLv2.1 or later, see LGPL.TXT
 --
--- Selects only the signals corresponding to the first 4 DOFs of the arm coming from the state:o port
+-- FUNCTIONALITIES:
+-- Selects only the signals corresponding to the first 4 DOFs of the arm coming from the icub/left_arm/state:o port
+-- Subsamples with a given factor 's'. e.g. forwards 1 incoming sample each s samples and ignores the rest.
  
+-- How to use the portMonitor
+
+-- In general:
+--  $ yarp connect /out /in tcp+recv.portmonitor+script.lua+context.myapp+file.my_lua_script
+  
+--  'script.lua' tells the carrier to create a port monitor object for Lua.  
+--  'context.myapp' tells the resource finder to load the script from the 'myapp' context. 
+-- 'file.my_lua_script' indicates 'my_lua_script' should be loaded by monitor object. 
+--  'my_lua_script' is located using standard yarp Resource Finder policy. The postfix 
+--  (e.g., '.lua') is not necessary.
+
+-- In our case:
+-- yarp connect /reachModule/handToBeClosed:o /handCtrl/handToBeClosed:i tcp+recv.portmonitor+script.lua+context.RBDemo+file.handCtrlMonitor
+ 
+-- yarp connect /touchDetector/contact_pos:o /handCtrl/handToBeClosed:i tcp+recv.portmonitor+script.lua+context.RBDemo+file.handCtrlMonitor
+
 -- loading lua-yarp binding library
 require("yarp")
 
-
+-- Parameters
+periodFactor = 5
+i = 0
 
 PortMonitor.create = function()
-    -- Touch information has priority, so it is always accepted
-    PortMonitor.setConstraint("true")
     return true;
 end
+
+-- 
+-- destroy is called when port monitor is destroyed
+--
+PortMonitor.destroy = function()
+end
+
 
 --
 -- accept is called when the port receives new data
@@ -22,9 +47,28 @@ end
 -- @return Boolean
 -- if false is returned, the data will be ignored 
 -- and update() will never be called
+--
+-- Forwards samples once every 'periodFactor' samples
 PortMonitor.accept = function(thing)
-    PortMonitor.setEvent("e_touch", 2.0)     -- Set a timout of 2 seconds to return control
-    return true
+
+    if ( i == 0 ) then
+        print("signalsMask.lua -----> Sample accepted")
+        i = periodFactor
+        return true
+    else
+        print("signalsMask.lua -----> Sample dropped")
+        i = i - 1
+        return false
+    end
 end
 
-
+-- PortMonitor.update
+-- ------------------
+-- This will be called if the data is accepted by PortMonitor.update(). User can modify and 
+-- return it using 'thing' object.
+--
+-- Forwards the first 4 dofs of the left_arm
+PortMonitor.update = function(thing)
+    maskedThing = thing:asVector():subVector(0,3)
+    return maskedThing
+end 

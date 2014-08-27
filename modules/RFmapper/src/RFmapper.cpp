@@ -225,11 +225,6 @@ public:
         cout << "Using projections file: " << projFName.c_str() << endl;
 
         ifstream* ifs = new ifstream;   //WARNING: Deallocate!
-        
-//         cout << "Initial projMat size: " << projMat.rows() << " x " << projMat.cols() << endl;
-//         cout << "projMat_[0][0] = " << projMat[0][0] << endl;
-//         cout << "projMat_[1][0] = " << projMat[1][0] << endl;
-//         cout << "projMat_[2][0] = " << projMat[2][0] << endl;
 
         cout << "Trying to open ifstream..." << endl;        
         ifs->open(projFName.c_str(), std::ifstream::in);
@@ -302,27 +297,36 @@ public:
         xin = vin->subVector( 0 , d );   // Select inputs only
         
         // Apply random projections to incoming features
-        Vector wx(numRF);
         
-        wx = projMat * xin;
-        
-        Vector sinwx(numRF);
-        Vector coswx(numRF);
-        
-        for ( int i = 0 ; i < numRF ; ++i )
+        if (mappingType == 1)
         {
-            sinwx[i] = sin(wx[i]);
-            coswx[i] = cos(wx[i]);
+            Vector wx(numRF);
+            
+            wx = projMat * xin;
+            
+            Vector sinwx(numRF);
+            Vector coswx(numRF);
+            
+            for ( int i = 0 ; i < numRF ; ++i )
+            {
+                sinwx[i] = sin(wx[i]);
+                coswx[i] = cos(wx[i]);
+            }
+            
+            // Send output features
+            Vector &xout = outFeatures.prepare();
+            xout.clear(); //important, objects get recycled
+            
+            xout.setSubvector(0, sinwx);
+            xout.setSubvector(numRF, coswx);        
+            
+            outFeatures.write();
         }
-        
-        // Send output features
-        Vector &xout = outFeatures.prepare();
-        xout.clear(); //important, objects get recycled
-        
-        xout.setSubvector(0, sinwx);
-        xout.setSubvector(numRF, coswx);        
-        
-        outFeatures.write();
+        else
+        {
+            printf("Error: Mapping type not available!\n");
+            return false;  
+        }
         
         return true;
     }

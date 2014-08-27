@@ -4,7 +4,7 @@
 -- CopyPolicy: Released under the terms of the LGPLv2.1 or later, see LGPL.TXT
 --
 -- DESCRIPTION:
--- Combines the position, velocity, acceletarion and F/T signals in a single vector for further processing
+-- Combines the position, velocity, acceletarion and F/T signals in a single Vector for further processing
  
 -- loading lua-yarp binding library
 require("yarp")

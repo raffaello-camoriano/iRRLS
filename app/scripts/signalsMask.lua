@@ -52,11 +52,11 @@ end
 PortMonitor.accept = function(thing)
 
     if ( i == 0 ) then
-        print("signalsMask.lua -----> Sample accepted")
+        --print("signalsMask.lua -----> Sample accepted")
         i = periodFactor
         return true
     else
-        print("signalsMask.lua -----> Sample dropped")
+        --print("signalsMask.lua -----> Sample dropped")
         i = i - 1
         return false
     end
@@ -69,6 +69,16 @@ end
 --
 -- Forwards the first 4 dofs of the left_arm
 PortMonitor.update = function(thing)
-    maskedThing = thing:asVector():subVector(0,3)
-    return maskedThing
+    
+    -- Create new data of vector type
+    th = yarp.Things()
+    vec = yarp.Vector()
+
+    vec:push_back(thing:asBottle():get(0):asDouble())
+    vec:push_back(thing:asBottle():get(1):asDouble())
+    vec:push_back(thing:asBottle():get(2):asDouble())
+    vec:push_back(thing:asBottle():get(3):asDouble())
+    
+    th:setPortWriter(vec)
+    return th    
 end 

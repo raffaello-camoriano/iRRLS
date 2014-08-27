@@ -23,106 +23,18 @@
 */
 
 /** 
-\defgroup handCtrl
+\defgroup RFmapper
  
-Example of grasping module based upon \ref ActionPrimitives 
-library. 
+Example of...
 
-Copyright (C) 2010 RobotCub Consortium
+Copyright (C) 2014 RobotCub Consortium
  
 Author: Raffaello Camoriano
 
 CopyPolicy: Released under the terms of the GNU GPL v2.0. 
 
 \section intro_sec Description 
-A module that makes use of \ref ActionPrimitives 
-library to open and close either of the hands.
-
-Scenario:
-
-1) Both hands are opened at startup
-
-2) A bottle containing the code of the hand to be closed
-is received
- 
-3) The corresponding hand is closed by calling the close_hand sequence
-
-4) The hand is opened again by the user via rpc:i
- 
-\section lib_sec Libraries 
-- YARP libraries. 
-- \ref ActionPrimitives library.  
-- \ref SkinDyn library.  
-
-#\section parameters_sec Parameters
- 
-\section portsa_sec Ports Accessed
-The robot interface is assumed to be operative.
- 
-\section portsc_sec Ports Created 
-Aside from the internal ports created by \ref ActionPrimitives 
-library, we also have: 
- 
-- \e /handCtrl/handToBeClosed:i receives a bottle containing the code associated to the hand to close
-
- 
-- \e /handCtrl/rpc:i remote procedure call.
-
-Recognized remote commands:
-    - 'open_left_hand'
-    - 'open_right_hand'
-    - 'close_left_hand'
-    - 'close_right_hand'
-
-\section in_files_sec Input Data Files
-None.
-
-\section out_data_sec Output Data Files 
-None. 
- 
-\section conf_file_sec Configuration Files 
---grasp_model_type \e type 
-- specify the grasp model type according to the \ref 
-  ActionPrimitives documentation.
- 
---grasp_model_left_file \e file 
-- specify the path to the file containing the grasp model 
-  options for the left hand.
-
---grasp_model_right_file \e file 
-- specify the path to the file containing the grasp model 
-  options for the right hand.
- 
---handCtrl_hand_sequences_file \e file 
-- specify the path to the file containing the hand motion 
-  sequences relative to the current context ( \ref
-  ActionPrimitives ).
- 
---from \e file 
-- specify the configuration file (use \e --context option to 
-  select the current context).
- 
-The configuration file passed through the option \e --from
-should look like as follows:
- 
-\code 
-[general]
-// options used to open a ActionPrimitives object 
-robot                           icub
-thread_period                   50
-default_exec_time               3.0
-reach_tol                       0.007
-verbosity                       on 
-torso_pitch                     on
-torso_roll                      off
-torso_yaw                       on
-torso_pitch_max                 30.0 
-tracking_mode                   off 
-verbosity                       on 
-\endcode 
-
-\section tested_os_sec Tested OS
-Windows
+A module that...
 
 \author Raffaello Camoriano
 */ 
@@ -132,19 +44,26 @@ Windows
 #include <iomanip>
 #include <string>
 #include <deque>
+#include <vector>
+#include <istream>
+#include <string>
+#include <sstream>
+
+#include <cmath>
 
 #include <yarp/os/Network.h>
 #include <yarp/os/RFModule.h>
 #include <yarp/os/Bottle.h>
 #include <yarp/os/BufferedPort.h>
-#include <yarp/sig/Vector.h>
 #include <yarp/os/Vocab.h>
+#include <yarp/sig/Vector.h>
+#include <yarp/sig/Matrix.h>
 #include <yarp/math/Math.h>
 #include <yarp/dev/Drivers.h>
 #include <yarp/conf/system.h>
 #include <iCub/perception/models.h>
 
-YARP_DECLARE_DEVICES(icubmod)
+//YARP_DECLARE_DEVICES(icubmod)
 
 using namespace std;
 using namespace yarp::os;
@@ -152,8 +71,60 @@ using namespace yarp::sig;
 using namespace yarp::dev;
 using namespace yarp::math;
 using namespace iCub::perception;
-using namespace iCub::action;
-//using namespace iCub::skinDynLib;
+
+/************************************************************************/
+// load_matrix function
+/************************************************************************/
+
+// load matrix from an ascii text file.
+void load_matrix(std::istream* is,
+        Matrix& matrix,
+        const std::string& delim = " ")
+{
+    using namespace std;
+
+    string      line;
+    string      strnum;
+
+
+    long unsigned int rowidx =  0;
+    long int colidx =  -1;
+    
+    // parse line by line
+    while (getline(*is, line))
+    {
+        for (string::const_iterator i = line.begin(); i != line.end(); i++)
+        {
+            
+            // If i is not a delim, then append it to strnum
+            if (delim.find(*i) == string::npos)
+            {
+                strnum += *i;
+                if(i+1 != line.end())
+                {
+                    
+                    continue;
+                }
+            }
+            
+            // if strnum is still empty, it means the previous char is also a
+            // delim (several delims appear together). Ignore this char.
+            if (strnum.empty())
+                continue;
+
+            // If we reach here, we got a number. Convert it to double.
+            double number;
+
+            istringstream(strnum) >> number;
+            ++colidx;
+            matrix[rowidx][colidx] = number;
+            
+            strnum.clear();            
+        }        
+        ++rowidx;
+        colidx = -1;
+    }
+}
 
 
 
@@ -163,17 +134,23 @@ class RFmapper: public RFModule
 protected:
     
     // Ports
-    BufferedPort<Bottle>      outFeatures;
-    BufferedPort<Bottle>      inFeatures;
+    BufferedPort<Vector>      outFeatures;
+    BufferedPort<Vector>      inFeatures;
     Port                      rpcPort;
     
     // Data
     int d;
     int t;
     int numRF;
-    Bottle* proj;       // Pointer to the numRF-dimensional list of projections
+    string projFName;   // File name of the projections matrix
+    Matrix projMat;    // Pointer to the [numRF x d]-dimensional list of projections
     int mappingType;
 
+    Vector vin;
+    Vector vout;
+    Vector xin;
+    Vector xout;
+    
 public:
     /************************************************************************/
     RFmapper()
@@ -229,32 +206,46 @@ public:
         d = rf.findGroup("general").check("d",Value(0)).asInt();
         t = rf.findGroup("general").check("t",Value(0)).asInt();
         numRF = rf.findGroup("general").check("numRF",Value(0)).asInt();
-        
+        projMat.resize(numRF,d);      // Initialize projections matrix
+            
         if (d <= 0 || t <= 0 || numRF <= 0)
         {
             printf("Error: Inconsistent dimensionalities!\n");
             return false;
         }
-        
-        // Load precomputed projections
-        proj = 0;
-        Value* res;
-        if (!rf.findGroup("proj").check("proj" , res))
+
+        // Load precomputed projections from the specified file
+        string projFName = rf.findGroup("general").find("proj").toString();
+        if (projFName=="")
         {
-            printf("Error: Projections list missing!\n");
-            return false;
+            cout<<"Sorry no projections were found, check config parameters"<<endl;
+            return -1;
         }
-        proj = res->asList(); 
- 
-        if (proj->size() != numRF)
+        projFName = rf.getContextPath() + "/proj/" + projFName;
+        cout << "Using projections file: " << projFName.c_str() << endl;
+
+        ifstream* ifs = new ifstream;   //WARNING: Deallocate!
+        
+//         cout << "Initial projMat size: " << projMat.rows() << " x " << projMat.cols() << endl;
+//         cout << "projMat_[0][0] = " << projMat[0][0] << endl;
+//         cout << "projMat_[1][0] = " << projMat[1][0] << endl;
+//         cout << "projMat_[2][0] = " << projMat[2][0] << endl;
+
+        cout << "Trying to open ifstream..." << endl;        
+        ifs->open(projFName.c_str(), std::ifstream::in);
+        cout << "ifstream opened..." << endl;
+        load_matrix(ifs, projMat, " ");
+        cout << "Projections matrix loaded. Size: " << projMat.rows() << " x " << projMat.cols() << endl;
+        
+        if (projMat.rows() != numRF || projMat.cols() != d )
         {
-            printf("Error: Inconsistent number of projections!\n");
+            printf("Error: Inconsistent dimensionalities!\n");
             return false;
         }
         
         // Set mapping type
         mappingType = rf.findGroup("general").check("mappingType",Value(1)).asInt();
-        
+    
         // Open ports
         string fwslash="/";
         inFeatures.open((fwslash+name+"/features:i").c_str());
@@ -299,15 +290,40 @@ public:
     /************************************************************************/
     bool updateModule()
     {
+        
+        // Wait for incoming sample
+        Vector *vin = inFeatures.read();    // blocking call
 
-        // Wait for closure command
-        Bottle *b = inFeatures.read();    // blocking call
-
-        if (b!=NULL)
+        if (vin == 0)
         {
-            // Apply random projections to incoming features
+            printf("Error: Read failed!\n");
+            return false;            
         }
-
+        xin = vin->subVector( 0 , d );   // Select inputs only
+        
+        // Apply random projections to incoming features
+        Vector wx(numRF);
+        
+        wx = projMat * xin;
+        
+        Vector sinwx(numRF);
+        Vector coswx(numRF);
+        
+        for ( int i = 0 ; i < numRF ; ++i )
+        {
+            sinwx[i] = sin(wx[i]);
+            coswx[i] = cos(wx[i]);
+        }
+        
+        // Send output features
+        Vector &xout = outFeatures.prepare();
+        xout.clear(); //important, objects get recycled
+        
+        xout.setSubvector(0, sinwx);
+        xout.setSubvector(numRF, coswx);        
+        
+        outFeatures.write();
+        
         return true;
     }
 
@@ -340,7 +356,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    YARP_REGISTER_DEVICES(icubmod)
+    //YARP_REGISTER_DEVICES(icubmod)
 
     ResourceFinder rf;
     rf.setVerbose(true);

@@ -17,7 +17,7 @@ include_directories(${YARP_INCLUDE_DIRS} ${ICUB_INCLUDE_DIRS})
 
 add_executable(${PROJECTNAME} ${source})
 
-#target_link_libraries(${PROJECTNAME} ${YARP_LIBRARIES} actionPrimitives)
+target_link_libraries(${PROJECTNAME} ${YARP_LIBRARIES})
 
 #install(TARGETS ${PROJECTNAME} DESTINATION bin)
 

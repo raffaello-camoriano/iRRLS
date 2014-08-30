@@ -27,7 +27,6 @@
 #include <fstream>
 #include <iomanip>
 #include <string>
-#include <deque>
 
 #include <yarp/os/Network.h>
 #include <yarp/os/RFModule.h>
@@ -36,25 +35,15 @@
 #include <yarp/sig/Vector.h>
 #include <yarp/os/Vocab.h>
 #include <yarp/math/Math.h>
-#include <yarp/dev/Drivers.h>
 #include <yarp/conf/system.h>
-#include <iCub/perception/models.h>
-
-YARP_DECLARE_DEVICES(icubmod)
 
 using namespace std;
 using namespace yarp::os;
 using namespace yarp::sig;
-using namespace yarp::dev;
 using namespace yarp::math;
-using namespace iCub::perception;
-using namespace iCub::action;
-//using namespace iCub::skinDynLib;
-
-
 
 /************************************************************************/
-class RFmapper: public RFModule
+class Normalizer: public RFModule
 {
 protected:
     
@@ -66,13 +55,12 @@ protected:
     // Data
     int d;
     int t;
-    int numRF;
-    Bottle* proj;       // Pointer to the numRF-dimensional list of projections
-    int mappingType;
-
+    Bottle maxes;      // Max limits
+    Bottle mins;       // Min limits
+    
 public:
     /************************************************************************/
-    RFmapper()
+    Normalizer()
     {
     }
 
@@ -112,45 +100,47 @@ public:
         string name=rf.find("name").asString().c_str();
         setName(name.c_str());
 
-        Property config;
-        config.fromConfigFile(rf.findFile("from").c_str());
-        Bottle &bGeneral=config.findGroup("general");
-        if (bGeneral.isNull())
-        {
-            printf("Error: group general is missing!\n");
-            return false;
-        }
+//         Property config;
+//         config.fromConfigFile(rf.findFile("from").c_str());
+//         Bottle &bGeneral=config.findGroup("general");
+//         if (bGeneral.isNull())
+//         {
+//             printf("Error: group general is missing!\n");
+//             return false;
+//         }
 
         // Set dimensionalities
-        d = rf.findGroup("general").check("d",Value(0)).asInt();
-        t = rf.findGroup("general").check("t",Value(0)).asInt();
-        numRF = rf.findGroup("general").check("numRF",Value(0)).asInt();
+        d = rf.check("d",Value(0)).asInt();
+        //t = rf.check("t",Value(0)).asInt();
         
-        if (d <= 0 || t <= 0 || numRF <= 0)
+        if (d <= 0 /* || t <= 0 */)
         {
             printf("Error: Inconsistent dimensionalities!\n");
             return false;
         }
         
-        // Load precomputed projections
-        proj = 0;
-        Value* res;
-        if (!rf.findGroup("proj").check("proj" , res))
+        // Get fixed limits
+        
+        maxes = rf.findGroup("LIMITS").findGroup("Max").tail();
+        mins = rf.findGroup("LIMITS").findGroup("Min").tail();
+        if (maxes.size() != mins.size())
         {
-            printf("Error: Projections list missing!\n");
-            return false;
-        }
-        proj = res->asList(); 
- 
-        if (proj->size() != numRF)
-        {
-            printf("Error: Inconsistent number of projections!\n");
+            printf("Error: Inconsistent limits dimensionalities!\n");
             return false;
         }
         
-        // Set mapping type
-        mappingType = rf.findGroup("general").check("mappingType",Value(1)).asInt();
-        
+        // Print Configuration
+        cout << endl << "-------------------------" << endl;
+        cout << "Configuration parameters:" << endl << endl;
+        cout << "d = " << d << endl;
+        printf("Limits:\n");
+        for (int i=0; i<maxes.size(); i++) {
+            printf("%d)  " , i);
+            printf("Min: %d\t", mins.get(i).asInt());
+            printf("Max: %d\n", maxes.get(i).asInt());
+        }
+        cout << "-------------------------" << endl << endl;
+       
         // Open ports
         string fwslash="/";
         inFeatures.open((fwslash+name+"/features:i").c_str());
@@ -196,12 +186,29 @@ public:
     bool updateModule()
     {
 
-        // Wait for closure command
-        Bottle *b = inFeatures.read();    // blocking call
+        // Wait for input feature vector
+        //cout << "Expecting input feature vector" << endl;
+        Bottle *bin = inFeatures.read();    // blocking call
+        //cout << "Got it!" << endl << bin->toString() << endl;
 
-        if (b!=NULL)
+        if (bin != 0)
         {
-            // Apply random projections to incoming features
+        Bottle& bout = outFeatures.prepare(); // Get a place to store things.
+        bout.clear();  // clear is important - b might be a reused object
+
+            // Apply scaling of incoming features
+            for (int i = 0 ; i < bin->size() ; ++i)
+            {
+                //cout << bin->get(i).asDouble() << endl << mins.get(i).asDouble() << endl << maxes.get(i+1).asDouble() << endl;
+                if (bin->get(i).asDouble() < mins.get(i).asDouble())
+                    bout.add(0.0);
+                else if (bin->get(i).asDouble() > maxes.get(i).asDouble())
+                    bout.add(1.0);
+                else
+                    bout.add( ( bin->get(i).asDouble() - mins.get(i).asDouble() ) / (maxes.get(i).asDouble() - mins.get(i).asDouble() ) );
+            }
+            //printf("Sending %s\n", bout.toString().c_str());
+            outFeatures.write();
         }
 
         return true;
@@ -236,15 +243,13 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    YARP_REGISTER_DEVICES(icubmod)
-
     ResourceFinder rf;
     rf.setVerbose(true);
-    rf.setDefaultConfigFile("RFmapper_config.ini");
+    rf.setDefaultConfigFile("Normalizer_config.ini");
     rf.setDefaultContext("iRRLS");
-    rf.setDefault("name","RFmapper");
+    rf.setDefault("name","Normalizer");
     rf.configure(argc,argv);
 
-    RFmapper mod;
+    Normalizer mod;
     return mod.runModule(rf);
 }

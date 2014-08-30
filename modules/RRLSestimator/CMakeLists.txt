@@ -13,11 +13,14 @@ file(GLOB source src/*.cpp)
 source_group("Source Files" FILES ${source})
 #source_group("Header Files" FILES ${header})
 
-include_directories(${YARP_INCLUDE_DIRS} ${ICUB_INCLUDE_DIRS})
+add_definitions(${Gurls_DEFINITIONS})
+
+include_directories(${YARP_INCLUDE_DIRS} ${ICUB_INCLUDE_DIRS} ${Gurls_INCLUDE_DIRS})
 
 add_executable(${PROJECTNAME} ${source})
 target_link_libraries(${PROJECTNAME} ${Gurls++_LIBRARIES})
-#target_link_libraries(${PROJECTNAME} ${YARP_LIBRARIES} actionPrimitives)
+target_link_libraries(${PROJECTNAME} ${YARP_LIBRARIES})
+target_link_libraries(${PROJECTNAME} ${Gurls_LIBRARIES})
 
 #install(TARGETS ${PROJECTNAME} DESTINATION bin)
 

@@ -58,11 +58,11 @@ protected:
     bool verbose;
     int d;
     int t;
-    Bottle maxes;               // Max limits
-    Bottle mins;                // Min limits
+    string perfType;
     int pretrain;               // Preliminary batch training required
     string pretrainFile;        // Preliminary batch training file
     int n_pretr;                // Number of pretraining samples
+    unsigned long int updateCount ;
        
     gMat2D<T> trainSet;    
     gMat2D<T> Xtr;    
@@ -127,12 +127,12 @@ public:
         }
         
         // Set perf type
-        perf = rf.check("perf",Value("RMSE")).asString();
+        perfType = rf.check("perf",Value("RMSE")).asString();
         
-        if ( perf != "RMSE" )
+        if ( perfType != "RMSE" )
         {
             printf("Error: Inconsistent performance measure! Set to RMSE.\n");
-            perf = "RMSE";
+            perfType = "RMSE";
         }
         
         // Set preliminary batch training preferences
@@ -150,7 +150,7 @@ public:
         cout << "Configuration parameters:" << endl << endl;
         cout << "d = " << d << endl;
         cout << "t = " << t << endl;
-        cout << "perf = " << perf << endl;
+        cout << "perf = " << perfType << endl;
         if ( pretrain == 1 )
         {
             printf("Pretraining requested\n");
@@ -211,6 +211,8 @@ public:
     {
         srand(static_cast<unsigned int>(time(NULL)));
 
+        updateCount = 0;
+        
         //Pre-training from file?
         if ( pretrain == 1 )
         {
@@ -248,44 +250,99 @@ public:
                 // Initialize model
                 cout << "Batch pretraining the RLS model with " << n_pretr << " samples." << endl;
                 estimator.train(Xtr, ytr);
-        }
-        catch (gException& e)
-        {
-            std::cout << e.getMessage() << std::endl;
-            return EXIT_FAILURE;
+            }
+            
+            catch (gException& e)
+            {
+                cout << e.getMessage() << endl;
+                //return false;   // NOTE: May be worth to set up specific error return values
+            }
         }
     }
 
     /************************************************************************/
     bool updateModule()
     {
-
+        updateCount++;
+        // Recursive update support and storage variables declaration and initialization
+        gMat2D<T> Xnew(1,d);
+        gMat2D<T> ynew(1,t);
+        gVec<T> Xnew_v(d);
+        gVec<T> ynew_v(t);
+        //gMat2D<T> yte_pred(nte,t);
+        gMat2D<T> *resptr = 0;
+        gMat2D<T> nSE(gMat2D<T>::zeros(1, t));
+//         gMat2D<T> nMSE_rec(gMat2D<T>::zeros(nte, t));
+        
         // Wait for input feature vector
-        //cout << "Expecting input feature vector" << endl;
-        Bottle *bin = inFeatures.read();    // blocking call
-        //cout << "Got it!" << endl << bin->toString() << endl;
+        if(verbose) cout << "Expecting input vector" << endl;
+        Bottle *bin = inVec.read();    // blocking call
+        if(verbose) cout << "Got it!" << endl << bin->toString() << endl;
 
         if (bin != 0)
         {
-        Bottle& bout = outFeatures.prepare(); // Get a place to store things.
-        bout.clear();  // clear is important - b might be a reused object
-
-            // Apply scaling of incoming features
+            Bottle& bpred = pred.prepare(); // Get a place to store things.
+            bpred.clear();  // clear is important - b might be a reused object
+            
+            Bottle& bperf = perf.prepare(); // Get a place to store things.
+            bperf.clear();  // clear is important - b might be a reused object
+    
+            //Store the received sample in gMat2D format for it to be compatible with gurls++
             for (int i = 0 ; i < bin->size() ; ++i)
             {
-                //cout << bin->get(i).asDouble() << endl << mins.get(i).asDouble() << endl << maxes.get(i+1).asDouble() << endl;
-                if (bin->get(i).asDouble() < mins.get(i).asDouble())
-                    bout.add(0.0);
-                else if (bin->get(i).asDouble() > maxes.get(i).asDouble())
-                    bout.add(1.0);
-                else
-                    bout.add( ( bin->get(i).asDouble() - mins.get(i).asDouble() ) / (maxes.get(i).asDouble() - mins.get(i).asDouble() ) );
+                if ( i < d )
+                {
+                    Xnew[i] = bin->get(i).asDouble();
+                }
+                else if ( (i>=d) && (i<d+t) )
+                {
+                    ynew[i - d] = bin->get(i).asDouble();
+                }
             }
-            //printf("Sending %s\n", bout.toString().c_str());
-            outFeatures.write();
+            
+            //-----------------------------------
+            //          Prediction
+            //-----------------------------------
+            
+            // Test on the incoming sample
+            resptr = estimator.eval(Xnew);
+            
+            // Store result in matrix yte_pred WARNING: to be removed
+            //copy(yte_pred.getData() + i , resptr->getData(), t , nte, 1 );
+            for (int i = 0 ; i < t ; ++i)
+            {
+                bpred.addDouble((*resptr)(1 , i));
+            }
+            if(verbose) printf("Sending prediction: %s\n", bpred.toString().c_str());
+            pred.write();
+            
+            // Compute nMSE and store
+            //WARNING: "/" operator works like matlab's "\".
+            nSE += varCols / ( ynew - *resptr )*( ynew - *resptr ) ;   
+
+            gMat2D<T> tmp = nSE  / (updateCount+1);
+            //copy(nMSE_rec.getData() + i, tmp.getData(), t, nte, 1);
+            for (int i = 0 ; i < t ; ++i)
+            {
+                bperf.addDouble(tmp(1 , i));
+            }
+            
+            if(verbose) printf("Sending %s:  %s\n", perfType.c_str(), bperf.toString().c_str());
+            pred.write();
+            
         }
 
         return true;
+        
+        //-----------------------------------
+        //             Update
+        //-----------------------------------
+                    
+        // Update estimator with a new input pair
+        //if(verbose) std::cout << "Update # " << i+1 << std::endl;
+        estimator.update(Xnew, ynew);
+        if(verbose) cout << "Update completed" << endl;
+    
     }
 
     /************************************************************************/
@@ -330,151 +387,3 @@ int main(int argc, char *argv[])
 }
 
 //-------------------------------------------------------------------------------------------------------------------------
-
-/**
-  * Main function
-  *
-  * The data is already split into training and test/recursive update set, and each set is
-  * in the form of an input data matrix and a output labels vector.
-  * Parameter selection and initial RLS estimation is carried out on a first subset of the training set.
-  * Iterative RLS updates are performed on the test set after out-of-sample predictions, simulating online learning.
-  * 
-  */
-int main(int argc, char* argv[])
-{
-    srand(static_cast<unsigned int>(time(NULL)));
-
-//    std::cout.precision(16);
-//    std::cout.setf( std::ios::fixed, std::ios::floatfield);
-//    std::cout.setf (std::cout.showpos);
-
-    if(argc < 2 || argc > 3)
-    {
-        std::cout << "Usage: " << argv[0] << " <gurls++ data directory>" << std::endl;
-        return EXIT_SUCCESS;
-    }
-
-    gMat2D<T> Xtr, Xte, ytr, yte;
-
-    std::string XtrFileName = std::string(argv[1]) + "/Xtr_id.txt";
-    std::string XteFileName = std::string(argv[1]) + "/Xte_id.txt";
-    std::string ytrFileName = std::string(argv[1]) + "/ytr_id.txt";
-    std::string yteFileName = std::string(argv[1]) + "/yte_id.txt";
-
-    // Set verbosity
-    bool verbose = 0;
-    if ( argc == 3 ) 
-    {
-        if (std::string(argv[2]) == "--verbose")
-            verbose = 1;
-    }
-    
-    RecursiveRLSCholUpdateWrapper<T> estimator("recursiveRLSChol");
-
-    try
-    {
-        // Load data files
-        std::cout << "Loading data files..." << std::endl;
-        Xtr.readCSV(XtrFileName);
-        Xte.readCSV(XteFileName);
-        ytr.readCSV(ytrFileName);
-        yte.readCSV(yteFileName);
-        
-        // Get data dimensions
-        const unsigned long ntr = Xtr.rows();   // Number of training samples
-        const unsigned long nte = Xte.rows();   // Number of test samples
-        const unsigned long d = Xtr.cols();     // Number of features (dimensionality)
-        const unsigned long t = ytr.cols();     // Number of outputs
-
-        // Compute output variance for each output on the test set
-        // outVar = var(yte);
-        gMat2D<T> varCols(gMat2D<T>::zeros(1,t));          // Matrix containing the column-wise variances
-        gVec<T>* sumCols_v = yte.sum(COLUMNWISE);          // Vector containing the column-wise sum
-        gMat2D<T> meanCols(sumCols_v->getData(), 1, t, 1); // Matrix containing the column-wise sum
-        meanCols /= nte;        // Matrix containing the column-wise mean
-        
-        if (verbose) std::cout << "Mean of the output columns: " << std::endl << meanCols << std::endl;
-        
-        for (int i = 0; i < nte; i++)
-        {
-            gMat2D<T> ytei(yte[i].getData(), 1, t, 1);
-            varCols += (ytei - meanCols) * (ytei - meanCols); // NOTE: Temporary assignment
-        }
-        varCols /= nte;     // Compute variance
-        if (verbose) std::cout << "Variance of the output columns: " << std::endl << varCols << std::endl;
-
-        // Initialize model
-        std::cout << "Batch training the RLS model with " << ntr << " samples." <<std::endl;
-        estimator.train(Xtr, ytr);
-
-        // Out-of-sample test and update RLS estimator recursively
-        std::cout << "Testing and incrementally updating the RLS model with " << nte << " samples."  << std::endl;
-
-        // Recursive update support and storage variables declaration and initialization
-        gMat2D<T> Xnew(1,d);
-        gMat2D<T> ynew(1,t);
-        gVec<T> Xnew_v(d);
-        gVec<T> ynew_v(t);
-        gMat2D<T> yte_pred(nte,t);
-        gMat2D<T> *resptr = 0;
-        gMat2D<T> nSE(gMat2D<T>::zeros(1, t));
-        gMat2D<T> nMSE_rec(gMat2D<T>::zeros(nte, t));
-   
-        for(unsigned long i=0; i<nte; ++i)
-        {
-            //-----------------------------------
-            //          Prediction
-            //-----------------------------------
-	  
-            // Read a row from the file where the test set is stored and update estimator 
-            getRow(Xte.getData(), nte, d, i, Xnew.getData());
-            getRow(yte.getData(), nte, t, i, ynew.getData());
-	    
-            // Test on the incoming sample
-            resptr = estimator.eval(Xnew);
-            
-            // Store result in matrix yte_pred
-            copy(yte_pred.getData() + i , resptr->getData(), t , nte, 1 );
-            
-            // Compute nMSE and store
-            //WARNING: "/" operator works like matlab's "\".
-            nSE += varCols / ( ynew - *resptr )*( ynew - *resptr ) ;   
-
-            gMat2D<T> tmp = nSE  / (i+1);
-            copy(nMSE_rec.getData() + i, tmp.getData(), t, nte, 1);
-        
-            //-----------------------------------
-            //             Update
-            //-----------------------------------
-                        
-            // Copy update sample into Xnew, ynew
-            getRow(Xte.getData(), nte, d, i, Xnew.getData());
-            getRow(yte.getData(), nte, t, i, ynew.getData());
-                
-            // Update estimator with a new input pair
-            if(verbose) std::cout << "Update # " << i+1 << std::endl;
-            estimator.update(Xnew, ynew);
-        }
-        
-        // Compute average nMSE between outputs
-        gVec<T>* avg_nMSE_rec_v = nMSE_rec.sum(ROWWISE);
-        *avg_nMSE_rec_v /= t;
-        gMat2D<T> avg_nMSE_rec(avg_nMSE_rec_v->getData() , nte , 1 , 1 );
-
-        // Save output matrices
-        std::cout << "Saving predictions matrix..." << std::endl;
-        yte_pred.saveCSV("yte_pred.txt");
-        
-        std::cout << "Saving performance matrices..." << std::endl;
-        avg_nMSE_rec.saveCSV("avg_nMSE_rec.txt");
-        nMSE_rec.saveCSV("nMSE_rec.txt");
-
-        std::cout << "Done! Now closing." << std::endl;
-        return EXIT_SUCCESS;
-    }
-    catch (gException& e)
-    {
-        std::cout << e.getMessage() << std::endl;
-        return EXIT_FAILURE;
-    }
-}

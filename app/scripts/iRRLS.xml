@@ -1,0 +1,71 @@
+<application>
+    <name>iRRLS</name>
+    <description>Recursive Regularized Least Squares application for the iCub humanoid robot</description>
+    <authors>
+        <author email="raffaello.camoriano@iit.it">Raffaello Camoriano</author>
+    </authors>
+    
+<!--   Modules   -->
+    
+    <module>
+        <name>RRLSestimator</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry></geometry>
+    </module>
+    <module>
+        <name>RFmapper</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry></geometry>
+    </module>
+    <module>
+        <name>Normalizer</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry></geometry>
+    </module>
+    <module>
+        <name>Synchronizer</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry></geometry>
+    </module>
+    
+<!--   Connections   -->
+    
+    <connection>
+        <from>/icub/left_arm/state:o</from>
+        <to>/Synchronizer/pos:i</to>
+        <protocol>tcp+.......................LUA SCRIPT CALL!!!</protocol>
+        <geometry></geometry>
+    </connection>    
+    <connection>
+        <from>/icub/left_arm/analog:o</from>
+        <to>/Synchronizer/ft:i</to>
+        <protocol>???</protocol>
+        <geometry></geometry>
+    </connection>
+    <connection>
+        <from>/Synchronizer/vec:o</from>
+        <to>/Normalizer/features:i</to>
+        <protocol>???</protocol>
+        <geometry></geometry>
+    </connection>
+    <connection>
+        <from>/Normalizer/features:o</from>
+        <to>/RFmapper/features:i</to>
+        <protocol>???</protocol>
+        <geometry></geometry>
+    </connection>
+    <connection>
+        <from>/RFmapper/features:i</from>
+        <to>/RRLSestimator/vec:i</to>
+        <protocol>???</protocol>
+        <geometry></geometry>
+    </connection>        
+</application>

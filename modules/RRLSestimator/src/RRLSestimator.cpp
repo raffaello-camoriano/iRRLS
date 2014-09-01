@@ -57,12 +57,14 @@ protected:
     // Data
     int d;
     int t;
-    Bottle maxes;      // Max limits
-    Bottle mins;       // Min limits
+    Bottle maxes;               // Max limits
+    Bottle mins;                // Min limits
+    int pretrain;              // Preliminary batch training required
+    string pretrainFile;        // Preliminary batch training file
     
 public:
     /************************************************************************/
-    Normalizer()
+    RRLSestimator()
     {
     }
 
@@ -102,53 +104,59 @@ public:
         string name=rf.find("name").asString().c_str();
         setName(name.c_str());
 
-//         Property config;
-//         config.fromConfigFile(rf.findFile("from").c_str());
-//         Bottle &bGeneral=config.findGroup("general");
-//         if (bGeneral.isNull())
-//         {
-//             printf("Error: group general is missing!\n");
-//             return false;
-//         }
-
         // Set dimensionalities
         d = rf.check("d",Value(0)).asInt();
-        //t = rf.check("t",Value(0)).asInt();
+        t = rf.check("t",Value(0)).asInt();
         
-        if (d <= 0 /* || t <= 0 */)
+        if (d <= 0 || t <= 0 )
         {
             printf("Error: Inconsistent dimensionalities!\n");
             return false;
         }
         
-        // Get fixed limits
+        // Set perf type
+        perf = rf.check("perf",Value("RMSE")).asString();
         
-        maxes = rf.findGroup("LIMITS").findGroup("Max").tail();
-        mins = rf.findGroup("LIMITS").findGroup("Min").tail();
-        if (maxes.size() != mins.size())
+        if ( perf != "RMSE" )
         {
-            printf("Error: Inconsistent limits dimensionalities!\n");
-            return false;
+            printf("Error: Inconsistent performance measure! Set to RMSE.\n");
+            perf = "RMSE";
+        }
+        
+        // Set preliminary batch training preferences
+        pretrain = rf.check("pretrain",Value("0")).asInt();
+        
+        if ( pretrain == 1 )
+        {            
+            // Set preliminary batch training file path
+            pretrainFile = rf.check("pretrain",Value("icubdyn.dat")).asString();
         }
         
         // Print Configuration
         cout << endl << "-------------------------" << endl;
         cout << "Configuration parameters:" << endl << endl;
         cout << "d = " << d << endl;
-        printf("Limits:\n");
-        for (int i=0; i<maxes.size(); i++) {
-            printf("%d)  " , i);
-            printf("Min: %d\t", mins.get(i).asInt());
-            printf("Max: %d\n", maxes.get(i).asInt());
+        cout << "t = " << t << endl;
+        cout << "perf = " << perf << endl;
+        if ( pretrain == 1 )
+        {
+            printf("Pretraining requested\n");
+            printf("Pretraining file name set to: %s\n", pretrainFile.c_str());
         }
         cout << "-------------------------" << endl << endl;
        
         // Open ports
+    
         string fwslash="/";
-        inFeatures.open((fwslash+name+"/features:i").c_str());
-        printf("inFeatures opened\n");
-        outFeatures.open((fwslash+name+"/features:o").c_str());
-        printf("outFeatures opened\n");
+        inVec.open((fwslash+name+"/vec:i").c_str());
+        printf("inVec opened\n");
+        
+        pred.open((fwslash+name+"/pred:o").c_str());
+        printf("pred opened\n");
+        
+        perf.open((fwslash+name+"/perf:o").c_str());
+        printf("perf opened\n");
+        
         rpcPort.open((fwslash+name+"/rpc:i").c_str());
         printf("rpcPort opened\n");
 
@@ -162,12 +170,17 @@ public:
     bool close()
     {        
         // Close ports
-        inFeatures.close();
-        printf("inFeatures port closed\n");
-        outFeatures.close();
-        printf("outFeatures port closed\n");
+        inVec.close();
+        printf("inVec closed\n");
+        
+        pred.close();
+        printf("pred closed\n");
+        
+        perf.close();
+        printf("perf closed\n");
+        
         rpcPort.close();
-        printf("rpcPort port closed\n");
+        printf("rpcPort closed\n");
 
         return true;
     }
@@ -182,6 +195,8 @@ public:
     /************************************************************************/
     void init()
     {
+        
+        //Pre-training from file?
     }
 
     /************************************************************************/
@@ -219,14 +234,15 @@ public:
     /************************************************************************/
     bool interruptModule()
     {
-        // Interrupt any blocking reads on the input port
-        inFeatures.interrupt();
-        printf("inFeatures port interrupted\n");
-        // Interrupt any blocking reads on the output port
-        outFeatures.interrupt();
-        printf("outFeatures port interrupted\n");
-
-        // Interrupt any blocking reads on the rpc port        
+        inVec.interrupt();
+        printf("inVec interrupted\n");
+        
+        pred.interrupt();
+        printf("pred interrupted\n");
+        
+        perf.interrupt();
+        printf("perf interrupted\n");
+        
         rpcPort.interrupt();
         printf("rpcPort interrupted\n");
 
@@ -247,12 +263,12 @@ int main(int argc, char *argv[])
 
     ResourceFinder rf;
     rf.setVerbose(true);
-    rf.setDefaultConfigFile("Normalizer_config.ini");
+    rf.setDefaultConfigFile("RRLSestimator_config.ini");
     rf.setDefaultContext("iRRLS");
-    rf.setDefault("name","Normalizer");
+    rf.setDefault("name","RRLSestimator");
     rf.configure(argc,argv);
 
-    Normalizer mod;
+    RRLSestimator mod;
     return mod.runModule(rf);
 }
 

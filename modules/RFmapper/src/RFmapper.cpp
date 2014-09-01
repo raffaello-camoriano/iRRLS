@@ -86,7 +86,6 @@ void load_matrix(std::istream* is,
     string      line;
     string      strnum;
 
-
     long unsigned int rowidx =  0;
     long int colidx =  -1;
     

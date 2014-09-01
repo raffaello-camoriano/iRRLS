@@ -55,13 +55,22 @@ protected:
     Port                      rpcPort;
     
     // Data
+    bool verbose;
     int d;
     int t;
     Bottle maxes;               // Max limits
     Bottle mins;                // Min limits
-    int pretrain;              // Preliminary batch training required
+    int pretrain;               // Preliminary batch training required
     string pretrainFile;        // Preliminary batch training file
-    
+    int n_pretr;                // Number of pretraining samples
+       
+    gMat2D<T> trainSet;    
+    gMat2D<T> Xtr;    
+    gMat2D<T> ytr;    
+    RecursiveRLSCholUpdateWrapper<T> estimator;
+    gMat2D<T> varCols;          // Matrix containing the column-wise variances computed on the training set
+
+
 public:
     /************************************************************************/
     RRLSestimator()
@@ -103,7 +112,10 @@ public:
     {
         string name=rf.find("name").asString().c_str();
         setName(name.c_str());
-
+        
+        // Set verbosity
+        verbose = rf.check("verbose",Value(0)).asInt();
+               
         // Set dimensionalities
         d = rf.check("d",Value(0)).asInt();
         t = rf.check("t",Value(0)).asInt();
@@ -130,6 +142,7 @@ public:
         {            
             // Set preliminary batch training file path
             pretrainFile = rf.check("pretrain",Value("icubdyn.dat")).asString();
+            n_pretr = rf.check("n_pretr",Value("2")).asInt();
         }
         
         // Print Configuration
@@ -142,6 +155,7 @@ public:
         {
             printf("Pretraining requested\n");
             printf("Pretraining file name set to: %s\n", pretrainFile.c_str());
+            printf("Number of pretraining samples: %d\n", n_pretr);
         }
         cout << "-------------------------" << endl << endl;
        
@@ -195,8 +209,51 @@ public:
     /************************************************************************/
     void init()
     {
-        
+        srand(static_cast<unsigned int>(time(NULL)));
+
         //Pre-training from file?
+        if ( pretrain == 1 )
+        {
+            string trainFilePath = "data/" + pretrainFile;
+            
+            estimator("recursiveRLSChol");
+            
+            try
+            {
+                // Load data files
+                cout << "Loading data files..." << endl;
+                trainSet.readCSV(trainFilePath);
+                Xtr.submatrix(trainSet , n_pretr , d);
+                for ( int i = 0 ; i < t ; ++i )
+                {
+                    ytr.setColumn(trainSet(d + i) , i);
+                }
+
+                // Compute variance for each output on the training set
+                varCols(gMat2D<T>::zeros(1,t));
+                gVec<T>* sumCols_v = ytr.sum(COLUMNWISE);          // Vector containing the column-wise sum
+                gMat2D<T> meanCols(sumCols_v->getData(), 1, t, 1); // Matrix containing the column-wise sum
+                meanCols /= n_pretr;        // Matrix containing the column-wise mean
+                
+                if (verbose) cout << "Mean of the output columns: " << endl << meanCols << endl;
+                
+                for (int i = 0; i < n_pretr; i++)
+                {
+                    gMat2D<T> ytri(ytr[i].getData(), 1, t, 1);
+                    varCols += (ytri - meanCols) * (ytri - meanCols); // NOTE: Temporary assignment
+                }
+                varCols /= n_pretr;     // Compute variance
+                if (verbose) cout << "Variance of the output columns: " << endl << varCols << endl;
+
+                // Initialize model
+                cout << "Batch pretraining the RLS model with " << n_pretr << " samples." << endl;
+                estimator.train(Xtr, ytr);
+        }
+        catch (gException& e)
+        {
+            std::cout << e.getMessage() << std::endl;
+            return EXIT_FAILURE;
+        }
     }
 
     /************************************************************************/
@@ -272,7 +329,7 @@ int main(int argc, char *argv[])
     return mod.runModule(rf);
 }
 
-
+//-------------------------------------------------------------------------------------------------------------------------
 
 /**
   * Main function

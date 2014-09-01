@@ -62,7 +62,7 @@ protected:
     int pretrain;               // Preliminary batch training required
     string pretrainFile;        // Preliminary batch training file
     int n_pretr;                // Number of pretraining samples
-    unsigned long int updateCount ;
+    long unsigned int updateCount ;
        
     gMat2D<T> trainSet;    
     gMat2D<T> Xtr;    
@@ -73,7 +73,7 @@ protected:
 
 public:
     /************************************************************************/
-    RRLSestimator()
+    RRLSestimator() : estimator("recursiveRLSChol")
     {
     }
 
@@ -218,7 +218,7 @@ public:
         {
             string trainFilePath = "data/" + pretrainFile;
             
-            estimator("recursiveRLSChol");
+            
             
             try
             {
@@ -228,11 +228,13 @@ public:
                 Xtr.submatrix(trainSet , n_pretr , d);
                 for ( int i = 0 ; i < t ; ++i )
                 {
-                    ytr.setColumn(trainSet(d + i) , i);
+                    gVec<T> tmpCol = trainSet(d + i);
+                    ytr.setColumn( tmpCol , (long unsigned int) i);
                 }
 
                 // Compute variance for each output on the training set
-                varCols(gMat2D<T>::zeros(1,t));
+                gMat2D<T> varCols = gMat2D<T>::zeros(1,t);
+                //varCols(zerosMat);
                 gVec<T>* sumCols_v = ytr.sum(COLUMNWISE);          // Vector containing the column-wise sum
                 gMat2D<T> meanCols(sumCols_v->getData(), 1, t, 1); // Matrix containing the column-wise sum
                 meanCols /= n_pretr;        // Matrix containing the column-wise mean

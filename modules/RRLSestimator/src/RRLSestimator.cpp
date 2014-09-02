@@ -49,7 +49,8 @@ class RRLSestimator: public RFModule
 protected:
     
     // Ports
-    BufferedPort<Bottle>      inVec;
+    //BufferedPort<Bottle>      inVec;
+    BufferedPort<Vector>      inVec;
     BufferedPort<Bottle>      pred;
     BufferedPort<Bottle>      perf;
     Port                      rpcPort;
@@ -278,7 +279,10 @@ public:
         
         // Wait for input feature vector
         if(verbose) cout << "Expecting input vector" << endl;
-        Bottle *bin = inVec.read();    // blocking call
+        
+        //Bottle *bin = inVec.read();    // blocking call
+        Vector *bin = inVec.read();    // blocking call
+        
         if(verbose) cout << "Got it!" << endl << bin->toString() << endl;
 
         if (bin != 0)
@@ -294,11 +298,13 @@ public:
             {
                 if ( i < d )
                 {
-                    Xnew[i] = bin->get(i).asDouble();
+                    //Xnew[i] = bin->get(i).asDouble();
+                    Xnew[i] = (*bin)[i];
                 }
                 else if ( (i>=d) && (i<d+t) )
                 {
-                    ynew[i - d] = bin->get(i).asDouble();
+                    //ynew[i - d] = bin->get(i).asDouble();
+                    ynew[i - d] = (*bin)[i];
                 }
             }
             

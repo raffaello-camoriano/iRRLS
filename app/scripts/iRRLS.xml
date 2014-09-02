@@ -4,68 +4,62 @@
     <authors>
         <author email="raffaello.camoriano@iit.it">Raffaello Camoriano</author>
     </authors>
-    
-<!--   Modules   -->
-    
     <module>
-        <name>RRLSestimator</name>
+        <name>Normalizer</name>
         <parameters></parameters>
         <node>localhost</node>
         <prefix></prefix>
-        <geometry></geometry>
+        <geometry>(Pos (x 663) (y 124.9))</geometry>
     </module>
     <module>
         <name>RFmapper</name>
         <parameters></parameters>
         <node>localhost</node>
         <prefix></prefix>
-        <geometry></geometry>
+        <geometry>(Pos (x 310) (y 10))</geometry>
     </module>
     <module>
-        <name>Normalizer</name>
+        <name>RRLSestimator</name>
         <parameters></parameters>
         <node>localhost</node>
         <prefix></prefix>
-        <geometry></geometry>
+        <geometry>(Pos (x 610) (y 10))</geometry>
     </module>
     <module>
         <name>Synchronizer</name>
         <parameters></parameters>
         <node>localhost</node>
         <prefix></prefix>
-        <geometry></geometry>
+        <geometry>(Pos (x 328) (y 118.9))</geometry>
     </module>
-    
-<!--   Connections   -->
-    
     <connection>
-        <from>/icub/left_arm/state:o</from>
+        <from external="true">/icub/left_arm/state:o</from>
         <to>/Synchronizer/pos:i</to>
-        <protocol>tcp+.......................LUA SCRIPT CALL!!!</protocol>
-        <geometry></geometry>
-    </connection>    
+        <protocol>tcp+recv.portmonitor+script.lua+context.iRRLS+file.signalsMask</protocol>
+        <geometry>(Pos ((x 99.5) (y 107.5)) ((x 185) (y 78)) ((x 329) (y 137))  )</geometry>
+    </connection>
     <connection>
-        <from>/icub/left_arm/analog:o</from>
+        <from external="true">/icub/left_arm/analog:o</from>
         <to>/Synchronizer/ft:i</to>
-        <protocol>???</protocol>
-        <geometry></geometry>
+        <protocol>tcp</protocol>
+        <geometry>(Pos ((x 250.5) (y 197)) ((x 193) (y 232)) ((x 329) (y 162))  )</geometry>
     </connection>
     <connection>
         <from>/Synchronizer/vec:o</from>
         <to>/Normalizer/features:i</to>
-        <protocol>???</protocol>
-        <geometry></geometry>
+        <protocol>tcp</protocol>
+        <geometry>(Pos ((x 578.5) (y 152.5)) ((x 514) (y 162)) ((x 664) (y 143))  )</geometry>
     </connection>
     <connection>
         <from>/Normalizer/features:o</from>
         <to>/RFmapper/features:i</to>
-        <protocol>???</protocol>
-        <geometry></geometry>
+        <protocol>tcp</protocol>
+        <geometry>(Pos ((x 919.5) (y 156)) ((x 833) (y 155)) ((x 1027) (y 157))  )</geometry>
     </connection>
     <connection>
-        <from>/RFmapper/features:i</from>
+        <from>/RFmapper/features:o</from>
         <to>/RRLSestimator/vec:i</to>
-        <protocol>???</protocol>
-        <geometry></geometry>
-    </connection>        
+        <protocol>tcp</protocol>
+        <geometry>(Pos ((x 1019) (y 310.5)) ((x 1027) (y 157)) ((x 1032) (y 464))  )</geometry>
+    </connection>
 </application>

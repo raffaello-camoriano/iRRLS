@@ -42,7 +42,7 @@
         <!-- output data if available -->
 
         <output>
-            <type>Vector</type>
+            <type>Bottle</type>
             <port>/RFmapper/features:o</port>
             <required>no</required>
             <description></description>

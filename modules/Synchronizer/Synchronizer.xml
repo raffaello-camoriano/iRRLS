@@ -1,0 +1,69 @@
+<module>
+    <!-- module's name should match its executable file's name. -->
+    <name>Synchronizer</name>
+    <description>Receives position and F/T data, estimates velocity and acceleration and returns an all-comprising vector of the form [ q ; qdot ; qdotdot ; F ; T ].</description>
+    <version>1.0</version>
+
+    <!-- <arguments> can have multiple <param> tags-->
+    <arguments>
+
+    <param desc="Number of outputs" default="6">t</param>    
+    <param desc="Name of the robot" default="icub">robot</param>
+    <param desc="Number of joints to consider" default="4">xsz</param>
+    <param desc="Configuration file" default="Synchronizer_config.ini">from</param>
+    
+    </arguments>
+
+    <!-- <authors> can have multiple <author> tags. -->
+    <authors>
+          <author email="raffaello.camoriano@iit.it">Raffaello Camoriano</author>
+    </authors>
+
+     <!-- <data> can have multiple <input> or <output> tags. -->
+     <data>
+        <!-- input data if available -->
+        <input>
+            <type>Bottle</type>
+            <port>/Synchronizer/pos:i</port>
+            <required>yes</required>
+            <description></description>
+        </input>
+        
+        <input>
+            <type>Bottle</type>
+            <port>/Synchronizer/ft:i</port>
+            <required>yes</required>
+            <description></description>
+        </input>        
+        
+        <input>
+            <type>rpc</type>
+            <port>/Synchronizer/rpc</port>
+            <required>no</required>
+            <priority>no</priority>
+            <description>RPC port to control the module from the terminal</description>
+        </input>
+        
+        <!-- output data if available -->
+
+        <output>
+            <type>Vector</type>
+            <port>/Synchronizer/vec:o</port>
+            <required>no</required>
+            <description></description>
+        </output>
+        
+    </data>
+
+    <dependencies>
+        <computer>
+        </computer>
+    </dependencies>
+
+    <!-- specific libraries or header files which are used for development -->
+    <development>
+        <library>YARP</library>
+    </development>
+
+</module>
+

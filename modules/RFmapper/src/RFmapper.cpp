@@ -61,17 +61,14 @@ A module that...
 #include <yarp/math/Math.h>
 #include <yarp/dev/Drivers.h>
 #include <yarp/conf/system.h>
-//#include <../../../GURLS/build/external/include/boost/iterator/iterator_concepts.hpp>
 #include <iCub/perception/models.h>
-
-//YARP_DECLARE_DEVICES(icubmod)
 
 using namespace std;
 using namespace yarp::os;
 using namespace yarp::sig;
 using namespace yarp::dev;
 using namespace yarp::math;
-using namespace iCub::perception;
+//using namespace iCub::perception;
 
 /************************************************************************/
 // load_matrix function
@@ -152,7 +149,7 @@ protected:
 //     Vector vout;
      Vector xin;
 //     Vector xout;
-    Bottle vin;
+//    Bottle vin;
     Bottle vout;
 //    Bottle xin;
 //    Bottle xout;
@@ -286,6 +283,7 @@ public:
     /************************************************************************/
     void init()
     {
+        xin.resize(d);
     }
 
     /************************************************************************/
@@ -308,7 +306,7 @@ public:
         for (int i=0 ; i<d ; ++i)
         {
             cout << "Copying vin->get(i).asDouble() = " << vin->get(i).asDouble() << endl;
-            xin[i] = vin->get(i).asDouble();
+            xin[i] = vin->get(i).asDouble();    //WARNING: check!
             
         }
         

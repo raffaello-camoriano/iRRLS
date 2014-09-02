@@ -302,11 +302,15 @@ public:
             return false;            
         }
         
+        cout << "*vin content: " << vin->toString() << endl;
         //xin = vin->subVector( 0 , d );   // Select inputs only
         
         for (int i=0 ; i<d ; ++i)
-            xin[i] = vin->get(d).asDouble();
-        
+        {
+            cout << "Copying vin->get(i).asDouble() = " << vin->get(i).asDouble() << endl;
+            xin[i] = vin->get(i).asDouble();
+            
+        }
         
         // Apply random projections to incoming features
         

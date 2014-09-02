@@ -6,8 +6,8 @@ set(appname iRRLS)
 
 file(GLOB templates ${CMAKE_CURRENT_SOURCE_DIR}/scripts/*.xml.template)
 file(GLOB scripts ${CMAKE_CURRENT_SOURCE_DIR}/scripts/*.xml)
-file(GLOB conf    ${CMAKE_CURRENT_SOURCE_DIR}/conf/proj/*.ini)
-file(GLOB proj    ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.ini)
+file(GLOB proj    ${CMAKE_CURRENT_SOURCE_DIR}/conf/proj/*.ini)
+file(GLOB conf    ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.ini)
 file(GLOB data    ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.dat)
 file(GLOB lua    ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.lua)
 

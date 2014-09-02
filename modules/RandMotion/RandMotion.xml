@@ -1,0 +1,64 @@
+<module>
+    <!-- module's name should match its executable file's name. -->
+    <name>RandMotion</name>
+    <description>Receives a Vector and applies a Random Features mapping applying the projections specified in a given file.</description>
+    <version>1.0</version>
+
+    <!-- <arguments> can have multiple <param> tags-->
+    <arguments>
+        
+    <param desc="Input features dimension" default="12">general::d</param>    
+    <param desc="Input labels dimension" default="6">general::t</param>    
+    <param desc="Output features dimension" default="500">general::numRF</param>    
+    <param desc="Mapping type" default="1">general::mappingType</param>    
+    <param desc="Projections filename" default="proj/proj500.ini">general::proj</param>    
+    <param desc="Configuration file" default="RFmapper_config.ini">from</param>
+    
+    </arguments>
+
+    <!-- <authors> can have multiple <author> tags. -->
+    <authors>
+          <author email="raffaello.camoriano@iit.it">Raffaello Camoriano</author>
+    </authors>
+
+     <!-- <data> can have multiple <input> or <output> tags. -->
+     <data>
+        <!-- input data if available -->
+        <input>
+            <type>Bottle</type>
+            <port>/RFmapper/features:i</port>
+            <required>yes</required>
+            <description></description>
+        </input> 
+        
+        <input>
+            <type>rpc</type>
+            <port>/RFmapper/rpc</port>
+            <required>no</required>
+            <priority>no</priority>
+            <description>RPC port to control the module from the terminal</description>
+        </input>
+        
+        <!-- output data if available -->
+
+        <output>
+            <type>Bottle</type>
+            <port>/RFmapper/features:o</port>
+            <required>no</required>
+            <description></description>
+        </output>
+        
+    </data>
+
+    <dependencies>
+        <computer>
+        </computer>
+    </dependencies>
+
+    <!-- specific libraries or header files which are used for development -->
+    <development>
+        <library>YARP</library>
+    </development>
+
+</module>
+

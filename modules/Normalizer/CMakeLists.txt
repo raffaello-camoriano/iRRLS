@@ -19,7 +19,7 @@ add_executable(${PROJECTNAME} ${source})
 
 target_link_libraries(${PROJECTNAME} ${YARP_LIBRARIES})
 
-#install(TARGETS ${PROJECTNAME} DESTINATION bin)
+install(TARGETS ${PROJECTNAME} DESTINATION bin)
 
 ##Debug: Print out all variables
 # get_cmake_property(_variableNames VARIABLES)
@@ -27,6 +27,6 @@ target_link_libraries(${PROJECTNAME} ${YARP_LIBRARIES})
     # message(STATUS "${_variableName}=${${_variableName}}")
 # endforeach()
 
-install(TARGETS ${PROJECTNAME} RUNTIME DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
+#install(TARGETS ${PROJECTNAME} RUNTIME DESTINATION ${CMAKE_CURRENT_SOURCE_DIR}/../bin)
 
-#yarp_install(FILES ${PROJECTNAME}.xml DESTINATION ${ICUBCONTRIB_MODULES_INSTALL_DIR})
+yarp_install(FILES ${PROJECTNAME}.xml DESTINATION ${ICUBCONTRIB_MODULES_INSTALL_DIR})

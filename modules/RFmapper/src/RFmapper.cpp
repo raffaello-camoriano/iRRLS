@@ -61,6 +61,7 @@ A module that...
 #include <yarp/math/Math.h>
 #include <yarp/dev/Drivers.h>
 #include <yarp/conf/system.h>
+//#include <../../../GURLS/build/external/include/boost/iterator/iterator_concepts.hpp>
 #include <iCub/perception/models.h>
 
 //YARP_DECLARE_DEVICES(icubmod)
@@ -133,8 +134,10 @@ class RFmapper: public RFModule
 protected:
     
     // Ports
-    BufferedPort<Vector>      outFeatures;
-    BufferedPort<Vector>      inFeatures;
+//     BufferedPort<Vector>      outFeatures;
+//     BufferedPort<Vector>      inFeatures;
+    BufferedPort<Bottle>      outFeatures;
+    BufferedPort<Bottle>      inFeatures;
     Port                      rpcPort;
     
     // Data
@@ -145,10 +148,14 @@ protected:
     Matrix projMat;    // Pointer to the [numRF x d]-dimensional list of projections
     int mappingType;
 
-    Vector vin;
-    Vector vout;
-    Vector xin;
-    Vector xout;
+//     Vector vin;
+//     Vector vout;
+     Vector xin;
+//     Vector xout;
+    Bottle vin;
+    Bottle vout;
+//    Bottle xin;
+//    Bottle xout;
     
 public:
     /************************************************************************/
@@ -286,14 +293,20 @@ public:
     {
         
         // Wait for incoming sample
-        Vector *vin = inFeatures.read();    // blocking call
-
+        //Vector *vin = inFeatures.read();    // blocking call
+        Bottle *vin = inFeatures.read();    // blocking call
+        
         if (vin == 0)
         {
             printf("Error: Read failed!\n");
             return false;            
         }
-        xin = vin->subVector( 0 , d );   // Select inputs only
+        
+        //xin = vin->subVector( 0 , d );   // Select inputs only
+        
+        for (int i=0 ; i<d ; ++i)
+            xin[i] = vin->get(d).asDouble();
+        
         
         // Apply random projections to incoming features
         
@@ -313,11 +326,20 @@ public:
             }
             
             // Send output features
-            Vector &xout = outFeatures.prepare();
+            //Vector &xout = outFeatures.prepare();
+            Bottle &xout = outFeatures.prepare();
             xout.clear(); //important, objects get recycled
             
-            xout.setSubvector(0, sinwx);
-            xout.setSubvector(numRF, coswx);        
+            //xout.setSubvector(0, sinwx);
+            //xout.setSubvector(numRF, coswx);
+            
+            for( int i = 0 ; i<2*numRF ; ++i)
+            {
+                if(i < numRF)
+                    xout.addDouble(sinwx[i]);
+                else
+                    xout.addDouble(coswx[i-numRF]);
+            }
             
             outFeatures.write();
         }

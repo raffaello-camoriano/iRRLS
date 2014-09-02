@@ -27,7 +27,7 @@
      <data>
         <!-- input data if available -->
         <input>
-            <type>Vector</type>
+            <type>Bottle</type>
             <port>/RRLSestimator/vec:i</port>
             <required>yes</required>
             <description></description>

@@ -30,7 +30,6 @@
 #include <yarp/os/RFModule.h>
 #include <yarp/os/Bottle.h>
 #include <yarp/os/BufferedPort.h>
-//#include <yarp/sig/Vector.h>
 #include <yarp/os/Vocab.h>
 #include <yarp/math/Math.h>
 #include <yarp/conf/system.h>
@@ -331,21 +330,15 @@ public:
         //gMat2D<T> yte_pred(nte,t);
         gMat2D<T> *resptr = 0;
         gMat2D<T> nSE(gMat2D<T>::zeros(1, t));
-//         gMat2D<T> nMSE_rec(gMat2D<T>::zeros(nte, t));
         
         // Wait for input feature vector
         if(verbose) cout << "Expecting input vector" << endl;
         
         Bottle *bin = inVec.read();    // blocking call
-        //Vector *bin = inVec.read();    // blocking call
         
-
-
         if (bin != 0)
         {
             if(verbose) cout << "Got it!" << endl << bin->toString() << endl;
-
-
 
             //Store the received sample in gMat2D format for it to be compatible with gurls++
             for (int i = 0 ; i < bin->size() ; ++i)
@@ -375,49 +368,44 @@ public:
             Bottle& bpred = pred.prepare(); // Get a place to store things.
             bpred.clear();  // clear is important - b might be a reused object
 
-            // Store result in matrix yte_pred WARNING: to be removed
-            //copy(yte_pred.getData() + i , resptr->getData(), t , nte, 1 );
             for (int i = 0 ; i < t ; ++i)
             {
-                //bpred.addDouble((*resptr)(1 , i));
-                double tmpd = (*resptr)(1 , i);
-                cout << tmpd << endl;
-//                bpred.add(tmpd);
-                bpred.add(0.0);
+                bpred.addDouble((*resptr)(1 , i));
             }
+            
             if(verbose) printf("Sending prediction!!! %s\n", bpred.toString().c_str());
             cout << "bpred.size() = "  << bpred.size() << endl;
             pred.write();
-            if(verbose) printf("Prediction written to port");
+            if(verbose) printf("Prediction written to port\n");
 
             //----------------------------------
             // performance
 
-            Bottle& bperf = perf.prepare(); // Get a place to store things.
-            bperf.clear();  // clear is important - b might be a reused object
-    
-            // Compute nMSE and store
-            //WARNING: "/" operator works like matlab's "\".
-            nSE += varCols / ( ynew - *resptr )*( ynew - *resptr ) ;   
+//             Bottle& bperf = perf.prepare(); // Get a place to store things.
+//             bperf.clear();  // clear is important - b might be a reused object
+//     
+//             // Compute nMSE and store
+//             //WARNING: "/" operator works like matlab's "\".
+//             nSE += varCols / ( ynew - *resptr )*( ynew - *resptr ) ;   
+// 
+//             gMat2D<T> tmp = nSE  / (updateCount+1);
+//             //copy(nMSE_rec.getData() + i, tmp.getData(), t, nte, 1);
+//             for (int i = 0 ; i < t ; ++i)
+//             {
+//                 bperf.addDouble(tmp(1 , i));
+//             }
+//             
+//             if(verbose) printf("Sending %s:  %s\n", perfType.c_str(), bperf.toString().c_str());
+//             perf.write();
 
-            gMat2D<T> tmp = nSE  / (updateCount+1);
-            //copy(nMSE_rec.getData() + i, tmp.getData(), t, nte, 1);
-            for (int i = 0 ; i < t ; ++i)
-            {
-                bperf.addDouble(tmp(1 , i));
-            }
-            
-            if(verbose) printf("Sending %s:  %s\n", perfType.c_str(), bperf.toString().c_str());
-            perf.write();
-
-            //-----------------------------------
+/*            //-----------------------------------
             //             Update
             //-----------------------------------
                         
             // Update estimator with a new input pair
             //if(verbose) std::cout << "Update # " << i+1 << std::endl;
             estimator.update(Xnew, ynew);
-            if(verbose) cout << "Update completed" << endl;            
+            if(verbose) cout << "Update completed" << endl;         */   
         }
 
         return true;

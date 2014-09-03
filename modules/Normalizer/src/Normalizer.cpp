@@ -100,20 +100,11 @@ public:
         string name=rf.find("name").asString().c_str();
         setName(name.c_str());
 
-//         Property config;
-//         config.fromConfigFile(rf.findFile("from").c_str());
-//         Bottle &bGeneral=config.findGroup("general");
-//         if (bGeneral.isNull())
-//         {
-//             printf("Error: group general is missing!\n");
-//             return false;
-//         }
-
         // Set dimensionalities
-        d = rf.check("d",Value(0)).asInt();
-        //t = rf.check("t",Value(0)).asInt();
+        d = rf.check("d",Value(12)).asInt();
+        t = rf.check("t",Value(6)).asInt();
         
-        if (d <= 0 /* || t <= 0 */)
+        if (d <= 0  || t <= 0 )
         {
             printf("Error: Inconsistent dimensionalities!\n");
             return false;
@@ -133,6 +124,7 @@ public:
         cout << endl << "-------------------------" << endl;
         cout << "Configuration parameters:" << endl << endl;
         cout << "d = " << d << endl;
+        cout << "t = " << t << endl;
         printf("Limits:\n");
         for (int i=0; i<maxes.size(); i++) {
             printf("%d)  " , i);
@@ -197,15 +189,20 @@ public:
         bout.clear();  // clear is important - b might be a reused object
 
             // Apply scaling of incoming features
-            for (int i = 0 ; i < bin->size() ; ++i)
+            for (int i = 0 ; i < d+t ; ++i)
             {
-                //cout << bin->get(i).asDouble() << endl << mins.get(i).asDouble() << endl << maxes.get(i+1).asDouble() << endl;
-                if (bin->get(i).asDouble() < mins.get(i).asDouble())
-                    bout.add(0.0);
-                else if (bin->get(i).asDouble() > maxes.get(i).asDouble())
-                    bout.add(1.0);
-                else
-                    bout.add( ( bin->get(i).asDouble() - mins.get(i).asDouble() ) / (maxes.get(i).asDouble() - mins.get(i).asDouble() ) );
+
+                if (i<d)        // Add normalized features
+                {
+                    if (bin->get(i).asDouble() < mins.get(i).asDouble())
+                        bout.add(0.0);
+                    else if (bin->get(i).asDouble() > maxes.get(i).asDouble())
+                        bout.add(1.0);
+                    else
+                        bout.add( ( bin->get(i).asDouble() - mins.get(i).asDouble() ) / (maxes.get(i).asDouble() - mins.get(i).asDouble() ) );
+                }
+                else            // Add labels
+                    bout.add(bin->get(i).asDouble());   
             }
             //printf("Sending %s\n", bout.toString().c_str());
             outFeatures.write();

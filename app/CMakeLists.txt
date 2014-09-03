@@ -12,8 +12,8 @@ file(GLOB data    ${CMAKE_CURRENT_SOURCE_DIR}/data/*.dat)
 file(GLOB lua    ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.lua)
 
 message (STATUS ${ICUBCONTRIB_APPLICATIONS_TEMPLATES_INSTALL_DIR})
-message (STATUS ${ICUBCONTRIB_CONTEXTS_INSTALL_DIR}) 
-message (STATUS ${scripts})                
+message (STATUS ${ICUBCONTRIB_CONTEXTS_INSTALL_DIR})
+message (STATUS ${scripts})
 
 ### create a single target that installs all applications at once
 yarp_install(FILES ${templates} DESTINATION ${ICUBCONTRIB_APPLICATIONS_TEMPLATES_INSTALL_DIR})

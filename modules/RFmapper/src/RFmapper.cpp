@@ -68,7 +68,6 @@ using namespace yarp::os;
 using namespace yarp::sig;
 using namespace yarp::dev;
 using namespace yarp::math;
-//using namespace iCub::perception;
 
 /************************************************************************/
 // load_matrix function
@@ -145,14 +144,8 @@ protected:
     Matrix projMat;    // Pointer to the [numRF x d]-dimensional list of projections
     int mappingType;
 
-//     Vector vin;
-//     Vector vout;
-     Vector xin;
-//     Vector xout;
-//    Bottle vin;
+    Vector xin;
     Bottle vout;
-//    Bottle xin;
-//    Bottle xout;
     
 public:
     /************************************************************************/
@@ -343,12 +336,18 @@ public:
             //xout.setSubvector(0, sinwx);
             //xout.setSubvector(numRF, coswx);
             
-            for( int i = 0 ; i<2*numRF ; ++i)
+            for( int i = 0 ; i<2*numRF + t ; ++i)
             {
-                if(i < numRF)
-                    xout.addDouble(sinwx[i]);
-                else
-                    xout.addDouble(coswx[i-numRF]);
+                
+                if (i<2*numRF)        // Add mapped features
+                {
+                    if(i < numRF)
+                        xout.addDouble(sinwx[i]);
+                    else
+                        xout.addDouble(coswx[i-numRF]);
+                }
+                else                  // Add labels
+                    xout.add(vin->get( i - 2*numRF + d ).asDouble());
             }
             
             outFeatures.write();

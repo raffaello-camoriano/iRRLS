@@ -74,7 +74,7 @@ protected:
 
 public:
     /************************************************************************/
-    RRLSestimator() : estimator("recursiveRLSChol")
+    RRLSestimator() : estimator("recursiveRLSChol"), updateCount(0)
     {
     }
 
@@ -142,7 +142,7 @@ public:
         if ( pretrain == 1 )
         {            
             // Set preliminary batch training file path
-            pretrainFile = rf.check("pretrain",Value("icubdyn.dat")).asString();
+            pretrainFile = rf.check("pretrainFile",Value("icubdyn.dat")).asString();
             n_pretr = rf.check("n_pretr",Value("2")).asInt();
         }
         
@@ -177,6 +177,86 @@ public:
 
         // Attach rpcPort to the respond() method
         attach(rpcPort);
+
+        srand(static_cast<unsigned int>(time(NULL)));
+
+        updateCount = 0;
+        
+        //------------------------------------------
+        //         Pre-training from file
+        //------------------------------------------
+
+        if ( pretrain == 1 )
+        {
+            string trainFilePath = rf.getContextPath() + "/data/" + pretrainFile;
+            
+            
+            
+            try
+            {
+
+
+                // Load data files
+                cout << "Loading data files..." << endl;
+                trainSet.readCSV(trainFilePath);
+
+                cout << "File successfully read!" << endl;
+                cout << "trainSet: " << trainSet << endl;
+                cout << "n_pretr = " << n_pretr << endl;
+                cout << "d = " << d << endl;
+
+                //WARNING: Add matrix dimensionality check!
+
+                // Resize Xtr
+                Xtr.resize( n_pretr , d );
+                
+                // Initialize Xtr
+                Xtr.submatrix(trainSet , n_pretr , d);
+                cout << "Xtr initialized!" << endl;
+
+                // Resize ytr
+                ytr.resize( n_pretr , t );
+                
+                // Initialize ytr
+                for ( int i = 0 ; i < t ; ++i )
+                {
+                    gVec<T> tmpCol = trainSet(d + i);
+                    gVec<T> tmpCol1(n_pretr);
+cout << tmpCol.subvec( (unsigned int) n_pretr );
+                    //tmpCol1 = tmpCol.subvec( (unsigned int) n_pretr );
+                    cout << "tmpCol1: " << tmpCol1 << endl;
+                    ytr.setColumn( tmpCol1 , (long unsigned int) i);
+                }
+                cout << "ytr initialized!" << endl;
+
+                // Compute variance for each output on the training set
+                gMat2D<T> varCols = gMat2D<T>::zeros(1,t);
+                //varCols(zerosMat);
+                gVec<T>* sumCols_v = ytr.sum(COLUMNWISE);          // Vector containing the column-wise sum
+                gMat2D<T> meanCols(sumCols_v->getData(), 1, t, 1); // Matrix containing the column-wise sum
+                meanCols /= n_pretr;        // Matrix containing the column-wise mean
+                
+                if (verbose) cout << "Mean of the output columns: " << endl << meanCols << endl;
+                
+                for (int i = 0; i < n_pretr; i++)
+                {
+                    gMat2D<T> ytri(ytr[i].getData(), 1, t, 1);
+                    varCols += (ytri - meanCols) * (ytri - meanCols); // NOTE: Temporary assignment
+                }
+                varCols /= n_pretr;     // Compute variance
+                if (verbose) cout << "Variance of the output columns: " << endl << varCols << endl;
+
+                // Initialize model
+                cout << "Batch pretraining the RLS model with " << n_pretr << " samples." << endl;
+                estimator.train(Xtr, ytr);
+            }
+            
+            catch (gException& e)
+            {
+                cout << e.getMessage() << endl;
+                //return false;   // NOTE: May be worth to set up specific error return values
+            }
+        }
         
         return true;
     }
@@ -210,63 +290,19 @@ public:
     /************************************************************************/
     void init()
     {
-        srand(static_cast<unsigned int>(time(NULL)));
-
-        updateCount = 0;
-        
-        //Pre-training from file?
-        if ( pretrain == 1 )
-        {
-            string trainFilePath = "data/" + pretrainFile;
             
-            
-            
-            try
-            {
-                // Load data files
-                cout << "Loading data files..." << endl;
-                trainSet.readCSV(trainFilePath);
-                Xtr.submatrix(trainSet , n_pretr , d);
-                for ( int i = 0 ; i < t ; ++i )
-                {
-                    gVec<T> tmpCol = trainSet(d + i);
-                    ytr.setColumn( tmpCol , (long unsigned int) i);
-                }
-
-                // Compute variance for each output on the training set
-                gMat2D<T> varCols = gMat2D<T>::zeros(1,t);
-                //varCols(zerosMat);
-                gVec<T>* sumCols_v = ytr.sum(COLUMNWISE);          // Vector containing the column-wise sum
-                gMat2D<T> meanCols(sumCols_v->getData(), 1, t, 1); // Matrix containing the column-wise sum
-                meanCols /= n_pretr;        // Matrix containing the column-wise mean
-                
-                if (verbose) cout << "Mean of the output columns: " << endl << meanCols << endl;
-                
-                for (int i = 0; i < n_pretr; i++)
-                {
-                    gMat2D<T> ytri(ytr[i].getData(), 1, t, 1);
-                    varCols += (ytri - meanCols) * (ytri - meanCols); // NOTE: Temporary assignment
-                }
-                varCols /= n_pretr;     // Compute variance
-                if (verbose) cout << "Variance of the output columns: " << endl << varCols << endl;
-
-                // Initialize model
-                cout << "Batch pretraining the RLS model with " << n_pretr << " samples." << endl;
-                estimator.train(Xtr, ytr);
-            }
-            
-            catch (gException& e)
-            {
-                cout << e.getMessage() << endl;
-                //return false;   // NOTE: May be worth to set up specific error return values
-            }
-        }
     }
 
     /************************************************************************/
     bool updateModule()
     {
         updateCount++;
+
+        // DEBUG
+
+        if(verbose) cout << "updateModule #" << updateCount << endl;
+
+
         // Recursive update support and storage variables declaration and initialization
         gMat2D<T> Xnew(1,d);
         gMat2D<T> ynew(1,t);
@@ -307,7 +343,10 @@ public:
                     //ynew[i - d] = (*bin)[i];
                 }
             }
-            
+    
+            if(verbose) cout << "Xnew: " << endl << Xnew << endl;
+            if(verbose) cout << "ynew: " << endl << ynew << endl;
+
             //-----------------------------------
             //          Prediction
             //-----------------------------------
@@ -337,19 +376,20 @@ public:
             
             if(verbose) printf("Sending %s:  %s\n", perfType.c_str(), bperf.toString().c_str());
             pred.write();
-            
+
+            //-----------------------------------
+            //             Update
+            //-----------------------------------
+                        
+            // Update estimator with a new input pair
+            //if(verbose) std::cout << "Update # " << i+1 << std::endl;
+            estimator.update(Xnew, ynew);
+            if(verbose) cout << "Update completed" << endl;            
         }
 
         return true;
         
-        //-----------------------------------
-        //             Update
-        //-----------------------------------
-                    
-        // Update estimator with a new input pair
-        //if(verbose) std::cout << "Update # " << i+1 << std::endl;
-        estimator.update(Xnew, ynew);
-        if(verbose) cout << "Update completed" << endl;
+
     
     }
 

@@ -244,6 +244,8 @@ public:
         // Set mapping type
         mappingType = rf.findGroup("general").check("mappingType",Value(1)).asInt();
     
+        xin.resize(d);
+
         // Open ports
         string fwslash="/";
         inFeatures.open((fwslash+name+"/features:i").c_str());
@@ -283,7 +285,7 @@ public:
     /************************************************************************/
     void init()
     {
-        xin.resize(d);
+        
     }
 
     /************************************************************************/
@@ -300,12 +302,18 @@ public:
             return false;            
         }
         
-        cout << "*vin content: " << vin->toString() << endl;
+        //cout << "*vin content: " << vin->toString() << endl;
         //xin = vin->subVector( 0 , d );   // Select inputs only
+
+        // DEBUG
+        //xin.resize(d);
+        //cout << "Size of xin = " << xin.size() << endl;
+        //cout << "d = " << d << endl;
         
+
         for (int i=0 ; i<d ; ++i)
         {
-            cout << "Copying vin->get(i).asDouble() = " << vin->get(i).asDouble() << endl;
+            //cout << "Copying vin->get(i).asDouble() = " << vin->get(i).asDouble() << endl;
             xin[i] = vin->get(i).asDouble();    //WARNING: check!
             
         }

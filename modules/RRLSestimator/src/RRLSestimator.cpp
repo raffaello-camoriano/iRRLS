@@ -197,10 +197,10 @@ public:
 
 
                 // Load data files
-                cout << "Loading data files..." << endl;
+                cout << "Loading data file..." << endl;
                 trainSet.readCSV(trainFilePath);
 
-                cout << "File successfully read!" << endl;
+                cout << "File " + trainFilePath + " successfully read!" << endl;
                 cout << "trainSet: " << trainSet << endl;
                 cout << "n_pretr = " << n_pretr << endl;
                 cout << "d = " << d << endl;
@@ -212,19 +212,40 @@ public:
                 
                 // Initialize Xtr
                 Xtr.submatrix(trainSet , n_pretr , d);
-                cout << "Xtr initialized!" << endl;
+                cout << "Xtr initialized! bla" << endl;
 
                 // Resize ytr
                 ytr.resize( n_pretr , t );
+                cout << "ytr resized!" << endl;
                 
                 // Initialize ytr
+
+                gVec<T> tmpCol(trainSet.rows());
+                cout << "tmpCol" << tmpCol << endl;
                 for ( int i = 0 ; i < t ; ++i )
                 {
-                    gVec<T> tmpCol = trainSet(d + i);
+                    cout << "trainSet(d + i): " << trainSet(d + i) << endl;
+                    tmpCol = trainSet(d + i);
+                    cout << "tmpCol" << tmpCol << endl;
                     gVec<T> tmpCol1(n_pretr);
-cout << tmpCol.subvec( (unsigned int) n_pretr );
+                    cout << "tmpCol1" << tmpCol1 << endl;
+
+                    //cout << tmpCol.subvec( (unsigned int) n_pretr ,  (unsigned int) 0);
+
+                    gVec<T> locs(n_pretr);
+                    cout << "locs" << locs << endl;
+                    
+                    
+                    
+                    for (int j = 0 ; j < n_pretr ; ++j)
+                        locs[j] = j;
+                    cout << "locs" << locs << endl;
+
+                    gVec<T>& tmpCol2 = tmpCol.copyLocations(locs);
+                    cout << "tmpCol2" << tmpCol2 << endl;
+                   
                     //tmpCol1 = tmpCol.subvec( (unsigned int) n_pretr );
-                    cout << "tmpCol1: " << tmpCol1 << endl;
+                    //cout << "tmpCol1: " << tmpCol1 << endl;
                     ytr.setColumn( tmpCol1 , (long unsigned int) i);
                 }
                 cout << "ytr initialized!" << endl;

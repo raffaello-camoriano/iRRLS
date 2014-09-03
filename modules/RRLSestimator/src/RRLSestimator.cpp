@@ -30,7 +30,7 @@
 #include <yarp/os/RFModule.h>
 #include <yarp/os/Bottle.h>
 #include <yarp/os/BufferedPort.h>
-#include <yarp/sig/Vector.h>
+//#include <yarp/sig/Vector.h>
 #include <yarp/os/Vocab.h>
 #include <yarp/math/Math.h>
 #include <yarp/conf/system.h>
@@ -50,7 +50,6 @@ protected:
     
     // Ports
     BufferedPort<Bottle>      inVec;
-    //BufferedPort<Vector>      inVec;
     BufferedPort<Bottle>      pred;
     BufferedPort<Bottle>      perf;
     Port                      rpcPort;
@@ -340,16 +339,14 @@ public:
         Bottle *bin = inVec.read();    // blocking call
         //Vector *bin = inVec.read();    // blocking call
         
-        if(verbose) cout << "Got it!" << endl << bin->toString() << endl;
+
 
         if (bin != 0)
         {
-            Bottle& bpred = pred.prepare(); // Get a place to store things.
-            bpred.clear();  // clear is important - b might be a reused object
-            
-            Bottle& bperf = perf.prepare(); // Get a place to store things.
-            bperf.clear();  // clear is important - b might be a reused object
-    
+            if(verbose) cout << "Got it!" << endl << bin->toString() << endl;
+
+
+
             //Store the received sample in gMat2D format for it to be compatible with gurls++
             for (int i = 0 ; i < bin->size() ; ++i)
             {
@@ -375,15 +372,30 @@ public:
             // Test on the incoming sample
             resptr = estimator.eval(Xnew);
             
+            Bottle& bpred = pred.prepare(); // Get a place to store things.
+            bpred.clear();  // clear is important - b might be a reused object
+
             // Store result in matrix yte_pred WARNING: to be removed
             //copy(yte_pred.getData() + i , resptr->getData(), t , nte, 1 );
             for (int i = 0 ; i < t ; ++i)
             {
-                bpred.addDouble((*resptr)(1 , i));
+                //bpred.addDouble((*resptr)(1 , i));
+                double tmpd = (*resptr)(1 , i);
+                cout << tmpd << endl;
+//                bpred.add(tmpd);
+                bpred.add(0.0);
             }
-            if(verbose) printf("Sending prediction: %s\n", bpred.toString().c_str());
+            if(verbose) printf("Sending prediction!!! %s\n", bpred.toString().c_str());
+            cout << "bpred.size() = "  << bpred.size() << endl;
             pred.write();
-            
+            if(verbose) printf("Prediction written to port");
+
+            //----------------------------------
+            // performance
+
+            Bottle& bperf = perf.prepare(); // Get a place to store things.
+            bperf.clear();  // clear is important - b might be a reused object
+    
             // Compute nMSE and store
             //WARNING: "/" operator works like matlab's "\".
             nSE += varCols / ( ynew - *resptr )*( ynew - *resptr ) ;   
@@ -396,7 +408,7 @@ public:
             }
             
             if(verbose) printf("Sending %s:  %s\n", perfType.c_str(), bperf.toString().c_str());
-            pred.write();
+            perf.write();
 
             //-----------------------------------
             //             Update

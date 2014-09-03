@@ -216,7 +216,7 @@ public:
         return true;
     }    
 
-    virtual double getPeriod()    { return 0.01;  }
+    virtual double getPeriod()    { return 0.05;  }
     
     virtual bool   updateModule() {
         

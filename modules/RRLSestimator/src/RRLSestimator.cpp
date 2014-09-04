@@ -335,6 +335,7 @@ public:
         if(verbose) cout << "Expecting input vector" << endl;
         
         Bottle *bin = inVec.read();    // blocking call
+        cout << "!!!!!!!!!!!!!!!!!! bin->toString(): " << bin->toString() << endl;
         
         if (bin != 0)
         {
@@ -345,18 +346,21 @@ public:
             {
                 if ( i < d )
                 {
-                    Xnew[i] = bin->get(i).asDouble();
-                    //Xnew[i] = (*bin)[i];
+                    Xnew(0,i) = bin->get(i).asDouble();
                 }
                 else if ( (i>=d) && (i<d+t) )
                 {
-                    ynew[i - d] = bin->get(i).asDouble();
+                    cout << "i - d = " << i- d <<endl;
+                    ynew(0, i - d ) = bin->get(i).asDouble();
+                    cout << "!!!!!!!!!!!!!!!!!! bin->get(i).asDouble(): " << bin->get(i).asDouble() << endl;
+                    cout << "!!!!!!!!!!!!!!!!!! ynew(1,i- d): " << ynew(1,i- d) << endl;
                     //ynew[i - d] = (*bin)[i];
                 }
             }
     
             if(verbose) cout << "Xnew: " << endl << Xnew << endl;
-            if(verbose) cout << "ynew: " << endl << ynew << endl;
+            if(verbose) cout << "ynew: " << endl << ynew.rows() << " x " << ynew.cols() << endl;
+            if(verbose) cout<< ynew << endl;
 
             //-----------------------------------
             //          Prediction
@@ -398,14 +402,17 @@ public:
 //             if(verbose) printf("Sending %s:  %s\n", perfType.c_str(), bperf.toString().c_str());
 //             perf.write();
 
-/*            //-----------------------------------
+            //-----------------------------------
             //             Update
             //-----------------------------------
                         
             // Update estimator with a new input pair
             //if(verbose) std::cout << "Update # " << i+1 << std::endl;
+            if(verbose) cout << "Now performing RRLS update" << endl;            
+            if(verbose) cout << "Xnew" << Xnew << endl;            
+            if(verbose) cout << "ynew" << ynew << endl;            
             estimator.update(Xnew, ynew);
-            if(verbose) cout << "Update completed" << endl;         */   
+            if(verbose) cout << "Update completed" << endl;            
         }
 
         return true;

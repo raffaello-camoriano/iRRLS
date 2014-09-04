@@ -335,7 +335,6 @@ public:
         if(verbose) cout << "Expecting input vector" << endl;
         
         Bottle *bin = inVec.read();    // blocking call
-        cout << "!!!!!!!!!!!!!!!!!! bin->toString(): " << bin->toString() << endl;
         
         if (bin != 0)
         {
@@ -350,11 +349,7 @@ public:
                 }
                 else if ( (i>=d) && (i<d+t) )
                 {
-                    cout << "i - d = " << i- d <<endl;
                     ynew(0, i - d ) = bin->get(i).asDouble();
-                    cout << "!!!!!!!!!!!!!!!!!! bin->get(i).asDouble(): " << bin->get(i).asDouble() << endl;
-                    cout << "!!!!!!!!!!!!!!!!!! ynew(1,i- d): " << ynew(1,i- d) << endl;
-                    //ynew[i - d] = (*bin)[i];
                 }
             }
     
@@ -378,7 +373,6 @@ public:
             }
             
             if(verbose) printf("Sending prediction!!! %s\n", bpred.toString().c_str());
-            cout << "bpred.size() = "  << bpred.size() << endl;
             pred.write();
             if(verbose) printf("Prediction written to port\n");
 

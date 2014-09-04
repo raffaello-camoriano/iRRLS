@@ -1,9 +1,3 @@
-// Performs a Random Features mapping of the input given the projections vector
-//
-// Reads the projections from the configuration file RFmapper.ini and applies them to the incoming normalized samples
-//
-
-
 /* 
  * Copyright (C) 2014 iCub Facility - Istituto Italiano di Tecnologia
  * Author: Raffaello Camoriano
@@ -72,9 +66,6 @@ public:
 
         // Get command string
         string receivedCmd = command.get(0).asString().c_str();
-       
-        //int responseCode;   //Will contain Vocab-encoded response
-
         reply.clear();  // Clear reply bottle
         
         if (receivedCmd == "help")
@@ -179,9 +170,7 @@ public:
     {
 
         // Wait for input feature vector
-        //cout << "Expecting input feature vector" << endl;
         Bottle *bin = inFeatures.read();    // blocking call
-        //cout << "Got it!" << endl << bin->toString() << endl;
 
         if (bin != 0)
         {
@@ -189,7 +178,7 @@ public:
         bout.clear();  // clear is important - b might be a reused object
 
             // Apply scaling of incoming features
-            for (int i = 0 ; i < d+t ; ++i)
+            for (int i = 0 ; i < d + t ; ++i)
             {
 
                 if (i<d)        // Add normalized features
@@ -204,7 +193,6 @@ public:
                 else            // Add labels
                     bout.add(bin->get(i).asDouble());   
             }
-            //printf("Sending %s\n", bout.toString().c_str());
             outFeatures.write();
         }
 

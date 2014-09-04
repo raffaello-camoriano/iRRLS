@@ -1,9 +1,3 @@
-// Performs a Random Features mapping of the input given the projections vector
-//
-// Reads the projections from the configuration file RFmapper.ini and applies them to the incoming normalized samples
-//
-
-
 /* 
  * Copyright (C) 2014 iCub Facility - Istituto Italiano di Tecnologia
  * Author: Raffaello Camoriano
@@ -25,7 +19,7 @@
 /** 
 \defgroup RFmapper
  
-Example of...
+Example of Random Features mapping of the input given the projections vector.
 
 Copyright (C) 2014 RobotCub Consortium
  
@@ -34,7 +28,7 @@ Author: Raffaello Camoriano
 CopyPolicy: Released under the terms of the GNU GPL v2.0. 
 
 \section intro_sec Description 
-A module that...
+A module that reads the projections from the configuration file RFmapper.ini and applies them to the incoming normalized samples
 
 \author Raffaello Camoriano
 */ 
@@ -130,8 +124,6 @@ class RFmapper: public RFModule
 protected:
     
     // Ports
-//     BufferedPort<Vector>      outFeatures;
-//     BufferedPort<Vector>      inFeatures;
     BufferedPort<Bottle>      outFeatures;
     BufferedPort<Bottle>      inFeatures;
     Port                      rpcPort;
@@ -143,7 +135,6 @@ protected:
     string projFName;   // File name of the projections matrix
     Matrix projMat;    // Pointer to the [numRF x d]-dimensional list of projections
     int mappingType;
-
     Vector xin;
     Bottle vout;
     
@@ -161,9 +152,6 @@ public:
 
         // Get command string
         string receivedCmd = command.get(0).asString().c_str();
-       
-        //int responseCode;   //Will contain Vocab-encoded response
-
         reply.clear();  // Clear reply bottle
         
         if (receivedCmd == "help")
@@ -286,7 +274,6 @@ public:
     {
         
         // Wait for incoming sample
-        //Vector *vin = inFeatures.read();    // blocking call
         Bottle *vin = inFeatures.read();    // blocking call
         
         if (vin == 0)
@@ -294,25 +281,11 @@ public:
             printf("Error: Read failed!\n");
             return false;            
         }
-        
-        //cout << "*vin content: " << vin->toString() << endl;
-        //xin = vin->subVector( 0 , d );   // Select inputs only
-
-        // DEBUG
-        //xin.resize(d);
-        //cout << "Size of xin = " << xin.size() << endl;
-        //cout << "d = " << d << endl;
-        
 
         for (int i=0 ; i<d ; ++i)
-        {
-            //cout << "Copying vin->get(i).asDouble() = " << vin->get(i).asDouble() << endl;
             xin[i] = vin->get(i).asDouble();    //WARNING: check!
-            
-        }
-        
+
         // Apply random projections to incoming features
-        
         if (mappingType == 1)
         {
             Vector wx(numRF);
@@ -329,17 +302,12 @@ public:
             }
             
             // Send output features
-            //Vector &xout = outFeatures.prepare();
             Bottle &xout = outFeatures.prepare();
             xout.clear(); //important, objects get recycled
             
-            //xout.setSubvector(0, sinwx);
-            //xout.setSubvector(numRF, coswx);
-            
-            for( int i = 0 ; i<2*numRF + t ; ++i)
+            for( int i = 0 ; i < 2*numRF + t ; ++i )
             {
-                
-                if (i<2*numRF)        // Add mapped features
+                if (i < 2*numRF)      // Add mapped features
                 {
                     if(i < numRF)
                         xout.addDouble(sinwx[i]);
@@ -349,7 +317,6 @@ public:
                 else                  // Add labels
                     xout.add(vin->get( i - 2*numRF + d ).asDouble());
             }
-            
             outFeatures.write();
         }
         else
@@ -357,11 +324,10 @@ public:
             printf("Error: Mapping type not available!\n");
             return false;  
         }
-        
         return true;
     }
 
-    /************************************************************************/
+/************************************************************************/
     bool interruptModule()
     {
         // Interrupt any blocking reads on the input port
@@ -379,7 +345,6 @@ public:
     }
 };
 
-
 /************************************************************************/
 int main(int argc, char *argv[])
 {
@@ -389,8 +354,6 @@ int main(int argc, char *argv[])
         printf("YARP server not available!\n");
         return -1;
     }
-
-    //YARP_REGISTER_DEVICES(icubmod)
 
     ResourceFinder rf;
     rf.setVerbose(true);

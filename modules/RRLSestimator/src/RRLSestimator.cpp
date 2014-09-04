@@ -84,9 +84,6 @@ public:
 
         // Get command string
         string receivedCmd = command.get(0).asString().c_str();
-       
-        //int responseCode;   //Will contain Vocab-encoded response
-
         reply.clear();  // Clear reply bottle
         
         if (receivedCmd == "help")
@@ -188,12 +185,8 @@ public:
         {
             string trainFilePath = rf.getContextPath() + "/data/" + pretrainFile;
             
-            
-            
             try
             {
-
-
                 // Load data files
                 cout << "Loading data file..." << endl;
                 trainSet.readCSV(trainFilePath);
@@ -210,35 +203,27 @@ public:
                 
                 // Initialize Xtr
                 Xtr.submatrix(trainSet , n_pretr , d);
-                cout << "Xtr initialized! bla" << endl;
+                cout << "Xtr initialized!" << endl << Xtr << endl;
 
                 // Resize ytr
                 ytr.resize( n_pretr , t );
                 cout << "ytr resized!" << endl;
                 
                 // Initialize ytr
-
                 gVec<T> tmpCol(trainSet.rows());
                 cout << "tmpCol" << tmpCol << endl;
                 for ( int i = 0 ; i < t ; ++i )
                 {
                     cout << "trainSet(d + i): " << trainSet(d + i) << endl;
                     tmpCol = trainSet(d + i);
-                    cout << "tmpCol" << tmpCol << endl;
                     gVec<T> tmpCol1(n_pretr);
-                    cout << "tmpCol1" << tmpCol1 << endl;
 
-                    //cout << tmpCol.subvec( (unsigned int) n_pretr ,  (unsigned int) 0);
+                    //cout << tmpCol.subvec( (unsigned int) n_pretr ,  (unsigned int) 0);       // WARNING: Fixed in latest GURLS version
 
                     gVec<T> locs(n_pretr);
-                    cout << "locs" << locs << endl;
-                    
-                    
-                    
                     for (int j = 0 ; j < n_pretr ; ++j)
                         locs[j] = j;
                     cout << "locs" << locs << endl;
-
                     gVec<T>& tmpCol2 = tmpCol.copyLocations(locs);
                     cout << "tmpCol2" << tmpCol2 << endl;
                    
@@ -250,7 +235,6 @@ public:
 
                 // Compute variance for each output on the training set
                 gMat2D<T> varCols = gMat2D<T>::zeros(1,t);
-                //varCols(zerosMat);
                 gVec<T>* sumCols_v = ytr.sum(COLUMNWISE);          // Vector containing the column-wise sum
                 gMat2D<T> meanCols(sumCols_v->getData(), 1, t, 1); // Matrix containing the column-wise sum
                 meanCols /= n_pretr;        // Matrix containing the column-wise mean

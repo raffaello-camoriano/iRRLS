@@ -48,8 +48,6 @@ private:
     AWLinEstimator       *linEst;
     AWQuadEstimator      *quadEst;
     
-    //BufferedPort<Vector> &outPort;      // Port from which the concatenated output is sent
-    
     Vector* PVABuffer;      // pointer to the Vector which contains q, qdot, qdotdot
     Mutex* PVABufferMutex;  // pointer to the Mutex that protects the access to internal buffer containing q, qdot, qdotdot
     
@@ -59,14 +57,14 @@ private:
         Stamp info;
         BufferedPort<Bottle>::getEnvelope(info);
         
-        //cout << "onRead" << endl;
-        //cout << b.toString() << endl;
         size_t xsz = b.size();
         Vector x(xsz);
-        
+
+        cout << "Received position bottle: " << b.toString() << endl;
         
         for (int i=0; i < b.size(); i++) {
             x[i] = b.get(i).asDouble();
+            cout << "x[" << i <<"] =" << x[i] <<endl;
         }
 
         // for the estimation the time stamp
@@ -105,17 +103,16 @@ public:
     }
 };
 
-// Usual YARP stuff...
 class Synchronizer: public RFModule
 {
 private:
+
     dataCollector        *port_pos;     // Input Vector [ q ]
     BufferedPort<Bottle>  FTport;       // Input Force/torque data    [ F , T ]
     BufferedPort<Vector>  outPort;      // Output vector [ q , qdot, qdotdot, F, T ]
-
     Port                  rpcPort;      
     Vector*               FTVector;
-    size_t                t;          // Size of the F/T vector
+    size_t                t;            // Size of the F/T vector
     size_t                xsz;          // Size of the F/T vector
 
 public:
@@ -169,7 +166,6 @@ public:
             cout<<"Warning: thrAcc cannot be lower than 0.0 => D=0.0 is assumed"<<endl;
             DAcc=0.0;
         }
-
         
         // Input positions
         port_pos = new dataCollector(NVel,DVel,NAcc,DAcc, &PVABuffer, &PVABufferMutex);
@@ -185,7 +181,6 @@ public:
         
         // Output Vector
         outPort.open((portName + "/vec:o").c_str());
-
 
         return true;
     }
@@ -227,55 +222,35 @@ public:
         
         // Protect ON
         PVABufferMutex.lock();
-        //cout << "Mutex locked " << endl;
         res.setSubvector( 0 , PVABuffer );
-        //cout << "PVABuffer: size = " << PVABuffer.size() << endl << PVABuffer.toString() << endl;
         PVABufferMutex.unlock();
-        //cout << "Mutex unlocked " << endl;
         // Protect OFF
         
-        //cout << res.toString() << endl;
-        
-        // Read the most recent F/T
-        //cout << "Waiting for FT Bottle" << endl;
-        
-        Bottle* b = FTport.read(); // Read from the port.  Waits until data arrives.
-        //cout << "Got FT Bottle" << endl;
+        // Read the most recent F/T        
+        Bottle* b = FTport.read();
         for (int i = 0 ; i < b->size() ; i++) {
-            //cout << (*FTVector)[i] << endl;
             (*FTVector)[i] = b->get(i).asDouble();
         }
         
-        //cout << "FT Vector received" << endl;
         if (FTVector==0)
         {
             // Skipping...
             return true;
         }
         
-// DEBUGGING        
-//         for (int i = 0 ; i < FTVector->size(); i++) {
-//             (*FTVector)[i] = 0;
-//         }
-        
         res.setSubvector( 3*xsz , *FTVector );   // WARNING: FTVector must be the most recent reading of the F/T sensor. How to get it in this callback?
-       
-        //cout << res.toString() << endl;
-        
-        //outPort.write();
 
         // the outbound packets will carry the same
         // envelope information of the inbound ones.
         if (outPort.getOutputCount()>0)
         {
-            //outPort.setEnvelope(info);        // WARNING: missing info
+            //outPort.setEnvelope(info);        // WARNING: missing info. To be implemented
             outPort.write();
         }
         else
             outPort.unprepare();        
         
         return true; 
-        
     }
 };
 

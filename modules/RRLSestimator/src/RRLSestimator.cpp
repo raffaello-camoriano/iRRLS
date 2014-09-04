@@ -329,18 +329,17 @@ public:
             {
                 if ( i < d )
                 {
-                    Xnew[i] = bin->get(i).asDouble();
-                    //Xnew[i] = (*bin)[i];
+                    Xnew(0,i) = bin->get(i).asDouble();
                 }
                 else if ( (i>=d) && (i<d+t) )
                 {
-                    ynew[i - d] = bin->get(i).asDouble();
-                    //ynew[i - d] = (*bin)[i];
+                    ynew(0, i - d ) = bin->get(i).asDouble();
                 }
             }
     
             if(verbose) cout << "Xnew: " << endl << Xnew << endl;
-            if(verbose) cout << "ynew: " << endl << ynew << endl;
+            if(verbose) cout << "ynew: " << endl << ynew.rows() << " x " << ynew.cols() << endl;
+            if(verbose) cout<< ynew << endl;
 
             //-----------------------------------
             //          Prediction
@@ -358,7 +357,6 @@ public:
             }
             
             if(verbose) printf("Sending prediction!!! %s\n", bpred.toString().c_str());
-            cout << "bpred.size() = "  << bpred.size() << endl;
             pred.write();
             if(verbose) printf("Prediction written to port\n");
 
@@ -382,14 +380,17 @@ public:
 //             if(verbose) printf("Sending %s:  %s\n", perfType.c_str(), bperf.toString().c_str());
 //             perf.write();
 
-/*            //-----------------------------------
+            //-----------------------------------
             //             Update
             //-----------------------------------
                         
             // Update estimator with a new input pair
             //if(verbose) std::cout << "Update # " << i+1 << std::endl;
+            if(verbose) cout << "Now performing RRLS update" << endl;            
+            if(verbose) cout << "Xnew" << Xnew << endl;            
+            if(verbose) cout << "ynew" << ynew << endl;            
             estimator.update(Xnew, ynew);
-            if(verbose) cout << "Update completed" << endl;         */   
+            if(verbose) cout << "Update completed" << endl;            
         }
 
         return true;

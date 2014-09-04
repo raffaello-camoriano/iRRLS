@@ -9,7 +9,7 @@ file(GLOB scripts ${CMAKE_CURRENT_SOURCE_DIR}/scripts/*.xml)
 file(GLOB proj    ${CMAKE_CURRENT_SOURCE_DIR}/conf/proj/*.ini)
 file(GLOB conf    ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.ini)
 file(GLOB data    ${CMAKE_CURRENT_SOURCE_DIR}/data/*.dat)
-file(GLOB lua    ${CMAKE_CURRENT_SOURCE_DIR}/conf/*.lua)
+file(GLOB lua    ${CMAKE_CURRENT_SOURCE_DIR}/scripts/*.lua)
 
 message (STATUS ${ICUBCONTRIB_APPLICATIONS_TEMPLATES_INSTALL_DIR})
 message (STATUS ${ICUBCONTRIB_CONTEXTS_INSTALL_DIR})

@@ -202,7 +202,8 @@ public:
                 Xtr.resize( n_pretr , d );
                 
                 // Initialize Xtr
-                Xtr.submatrix(trainSet , n_pretr , d);
+                //Xtr.submatrix(trainSet , n_pretr , d);
+                Xtr.submatrix(trainSet , 0 , 0);
                 cout << "Xtr initialized!" << endl << Xtr << endl;
 
                 // Resize ytr

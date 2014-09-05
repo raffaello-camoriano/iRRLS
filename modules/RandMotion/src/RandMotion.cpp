@@ -47,7 +47,9 @@ protected:
     
     // Data
     string      armSide;
-    string      robot;    
+    string      robot;
+    Vector      boxCenterPos;   // Position of the box's center [ xCenter, yCenter, zCenter ]
+    Vector      boxSideSizes;   // Dimensions of the box [ xSize, ySize, zSize ]
     
     handToCenter()
     {
@@ -123,17 +125,73 @@ public:
         robot = rf.find("robot").toString();
         if (robot=="")
         {
-            cout<<"Robot name was not set correctly, setting to \"icub\"..."<<endl;
+            cout<<"Robot name was not set correctly, setting to \"icub\" by default."<<endl;
             robot = "icub";
-        }        
+        }
         
         // Get arm side
         armSide = rf.find("armSide").toString();
         if (armSide!="left" && armSide!="right")
         {
-            cout<<"Arm side was not set correctly, setting to left..."<<endl;
+            cout<<"Arm side was not set correctly, setting to left by default."<<endl;
             armSide = "left";
         }
+        
+        // Get bounding box's center (w.r.t. ROOT frame)
+        bool isOk = 1;
+        if (rf.check("xCenter"))
+            boxCenterPos[0] = rf.find("xCenter").asDouble();
+        else
+            isOk = 0;
+        
+        if (rf.check("yCenter") && isOk)
+            boxCenterPos[1] = rf.find("yCenter").asDouble();
+        else
+            isOk = 0;
+        
+        if (rf.check("zCenter") && isOk)
+            boxCenterPos[2] = rf.find("zCenter").asDouble();
+        else
+            isOk = 0;
+        
+        if ( isOk == 0 )        // Abort!
+        {
+            printf("Error: Box center not set!\n");
+            return false;
+        }        
+        
+        // Get bounding box's dimensions (w.r.t. x, y,  z axes)
+        if (rf.check("xSideSize"))
+            boxSideSizes[0] = rf.find("xSideSize").asDouble();
+        else
+            isOk = 0;
+        
+        if (rf.check("ySideSize") && isOk)
+            boxSideSizes[1] = rf.find("ySideSize").asDouble();
+        else
+            isOk = 0;
+        
+        if (rf.check("zSideSize") && isOk)
+            boxSideSizes[2] = rf.find("zSideSize").asDouble();
+        else
+            isOk = 0;
+        
+        if ( isOk == 0 )        // Abort!
+        {
+            printf("Error: Box dimensions not set!\n");
+            return false;
+        }        
+        
+        // Check reachability
+        
+        // Initialize box vertexes points
+        Vector xdhat, odhat, qdhat;
+        icart->askForPosition(xd,xdhat,odhat,qdhat);
+
+        // Get desired home position of the other arm
+        
+        // Check for potential collisions
+        
         
         // Print Configuration
         cout << endl << "-------------------------" << endl;

@@ -326,6 +326,7 @@ public:
             if(verbose) cout << "Got it!" << endl << bin->toString() << endl;
 
             //Store the received sample in gMat2D format for it to be compatible with gurls++
+
             for (int i = 0 ; i < bin->size() ; ++i)
             {
                 if ( i < d )
@@ -334,12 +335,14 @@ public:
                 }
                 else if ( (i>=d) && (i<d+t) )
                 {
+
                     ynew(0, i - d ) = bin->get(i).asDouble();
                 }
             }
     
             if(verbose) cout << "Xnew: " << endl << Xnew << endl;
             if(verbose) cout << "ynew: " << endl << ynew.rows() << " x " << ynew.cols() << endl;
+
             if(verbose) cout<< ynew << endl;
 
             //-----------------------------------
@@ -354,7 +357,7 @@ public:
 
             for (int i = 0 ; i < t ; ++i)
             {
-                bpred.addDouble((*resptr)(1 , i));
+                bpred.addDouble((*resptr)(0 , i));
             }
             
             if(verbose) printf("Sending prediction!!! %s\n", bpred.toString().c_str());

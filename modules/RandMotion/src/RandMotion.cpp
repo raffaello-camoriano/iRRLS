@@ -1,4 +1,3 @@
-
 /* 
  * Copyright (C) 2014 iCub Facility - Istituto Italiano di Tecnologia
  * Author: Raffaello Camoriano
@@ -17,11 +16,21 @@
  * Public License for more details
 */
 
+//#define CHAR_BIT  8    // Number of bits for a byte
+
 
 #include <iostream>
 #include <fstream>
 #include <iomanip>
 #include <string>
+#include <vector>
+#include <istream>
+#include <string>
+#include <sstream>
+#include <iterator>
+#include <algorithm>
+#include <istream>
+#include <sstream>
 
 #include <yarp/os/Network.h>
 #include <yarp/os/RFModule.h>
@@ -30,12 +39,21 @@
 #include <yarp/sig/Vector.h>
 #include <yarp/os/Vocab.h>
 #include <yarp/math/Math.h>
+#include <yarp/math/Rand.h>
 #include <yarp/conf/system.h>
+#include <yarp/dev/all.h>
+
+YARP_DECLARE_DEVICES(icubmod)
+
+#include <iCub/ctrl/math.h>
 
 using namespace std;
 using namespace yarp::os;
 using namespace yarp::sig;
 using namespace yarp::math;
+using namespace yarp::dev;
+using namespace iCub::ctrl;
+
 
 /************************************************************************/
 class RandMotion: public RFModule
@@ -43,38 +61,54 @@ class RandMotion: public RFModule
 protected:
     
     // Ports
-    Port                      rpcPort;
+    Port                        rpcPort;
     
     // Data
-    string      armSide;
-    string      robot;
-    Vector      boxCenterPos;   // Position of the box's center [ xCenter, yCenter, zCenter ]
-    Vector      boxSideSizes;   // Dimensions of the box [ xSize, ySize, zSize ]
+    string                      armSide;
+    string                      robot;
+    Vector                      boxCenterPos;   // Position of the box's center [ xCenter, yCenter, zCenter ]
+    Vector                      boxSideSizes;   // Dimensions of the box [ xSize, ySize, zSize ]
+    vector<Vector>              boxVertexes;    // vector containing the box vertexes
     
-    handToCenter()
+    PolyDriver                  clientCartCtrl;
+    ICartesianControl          *icart;   
+    
+    vector<int> get_bits(unsigned int x)
     {
-        Vector xd(3), od(4);                            // Set a position in the center in front of the robot
-        if (robot== "icubSim")    {
-            xd[0]=-0.35 + Rand::scalar(0,0.05); xd[1]=0.05 + Rand::scalar(0,0.04); xd[2]=0.05;}
-        else {
-            xd[0]=-0.35 + Rand::scalar(0,0.05); xd[1]=0.10 + Rand::scalar(0,0.04); xd[2]=0.10;}
+        vector<int> ret;
+        for (unsigned int mask=0x80000000; mask; mask>>=1) {
+            ret.push_back((x & mask) ? 1 : 0);
+        }
+        return ret;
+    }
     
-    
-        Vector oy(4), ox(4);
-
-        oy[0]=0.0; oy[1]=1.0; oy[2]=0.0; oy[3]=M_PI;
-        ox[0]=1.0; ox[1]=0.0; ox[2]=0; ox[3]=M_PI/2.0;
+    void handToCenter()
+    {
+        Vector xd(3)/*, od(4)*/; // Target position
         
-        Matrix Ry = iCub::ctrl::axis2dcm(oy);   // from axis/angle to rotation matrix notation
-        Matrix Rx = iCub::ctrl::axis2dcm(ox);
-
-        Matrix R = Ry*Rx;                 // compose the two rotations keeping the order
-        //fprintf(stdout,"M = \n[ %s ] \n\n", R.toString().c_str());
-        od = iCub::ctrl::dcm2axis(R);     // from rotation matrix back to the axis/angle notation    
-
-        //fprintf(stdout,"Command send to move to %.2f, %.2f, %.2f on the robot frame\n", xd[0], xd[1], xd[2] );
-
+        xd[0]= boxCenterPos[0] + Rand::scalar( -boxSideSizes[0] , boxSideSizes[0] );
+        xd[1]= boxCenterPos[1] + Rand::scalar( -boxSideSizes[1] , boxSideSizes[1] );
+        xd[2]= boxCenterPos[2] + Rand::scalar( -boxSideSizes[2] , boxSideSizes[2] );
+    
+    
+         //Target orientation
+//         Vector oy(4), ox(4);
+// 
+//         oy[0]=0.0; oy[1]=1.0; oy[2]=0.0; oy[3]=M_PI;
+//         ox[0]=1.0; ox[1]=0.0; ox[2]=0.0; ox[3]=M_PI/2.0;
+//         
+//         Matrix Ry = iCub::ctrl::axis2dcm(oy);   // from axis/angle to rotation matrix notation
+//         Matrix Rx = iCub::ctrl::axis2dcm(ox);
+// 
+//         Matrix R = Ry*Rx;                 // compose the two rotations keeping the order
+//         od = iCub::ctrl::dcm2axis(R);     // from rotation matrix back to the axis/angle notation    
+/*
         icart->goToPoseSync(xd,od);   // send request and wait for reply
+        icart->waitMotionDone(0.04);*/
+
+        double randDuration = Rand::scalar( 3.0 , 7.0 );
+
+        icart->goToPositionSync(xd , randDuration);   // send request and wait for reply
         icart->waitMotionDone(0.04);
         return;
     }
@@ -83,8 +117,10 @@ public:
     /************************************************************************/
     RandMotion()
     {
+        icart = 0;
     }
 
+    /************************************************************************/    
     // rpcPort commands handler
     bool respond(const Bottle &      command,
                  Bottle &      reply)
@@ -116,11 +152,13 @@ public:
         return true;
     }
 
+    /************************************************************************/
     bool configure(ResourceFinder &rf)
     {
         string name=rf.find("name").asString().c_str();
         setName(name.c_str());
 
+        
         // Get robot name
         robot = rf.find("robot").toString();
         if (robot=="")
@@ -129,6 +167,9 @@ public:
             robot = "icub";
         }
         
+        //cout << "Configuration started" << std::endl;
+        std::cout << "robot name: " + robot << std::endl;
+        
         // Get arm side
         armSide = rf.find("armSide").toString();
         if (armSide!="left" && armSide!="right")
@@ -136,9 +177,12 @@ public:
             cout<<"Arm side was not set correctly, setting to left by default."<<endl;
             armSide = "left";
         }
+        std::cout << "arm side: " + armSide << std::endl;
         
         // Get bounding box's center (w.r.t. ROOT frame)
         bool isOk = 1;
+        boxCenterPos.resize(3);
+        
         if (rf.check("xCenter"))
             boxCenterPos[0] = rf.find("xCenter").asDouble();
         else
@@ -158,9 +202,12 @@ public:
         {
             printf("Error: Box center not set!\n");
             return false;
-        }        
+        }
+        
+        std::cout << "Got bounding box center" << std::endl;
         
         // Get bounding box's dimensions (w.r.t. x, y,  z axes)
+        boxSideSizes.resize(3);
         if (rf.check("xSideSize"))
             boxSideSizes[0] = rf.find("xSideSize").asDouble();
         else
@@ -181,16 +228,87 @@ public:
             printf("Error: Box dimensions not set!\n");
             return false;
         }        
-        
+        std::cout << "Got box sides sizes" << std::endl;
+
         // Check reachability
         
-        // Initialize box vertexes points
-        Vector xdhat, odhat, qdhat;
-        icart->askForPosition(xd,xdhat,odhat,qdhat);
-
-        // Get desired home position of the other arm
+        // Open Cartesian interface
+        Property option("(device cartesiancontrollerclient)");
+        option.put("remote","/" + robot + "/cartesianController/" + armSide + "_arm");
+        option.put("local","/client/" + armSide + "_arm");
         
-        // Check for potential collisions
+        if (!clientCartCtrl.open(option))
+        {
+            return false;
+            cout << "Client Cartesian controller openinig failed!" << endl;
+        }
+        cout << "Client Cartesian controller opened successfully!" << endl;
+        
+        if (clientCartCtrl.isValid()) {
+            clientCartCtrl.view(icart);
+            cout << "Cartesian interface initialized successfully!" << endl;
+        }
+        else
+        {
+            cout << "Cartesian interface initialization failed!" << endl;
+            return false;
+        }
+
+        boxVertexes.resize(8);
+        // Initialize box vertexes points
+        for ( int i = 0 ; i < 8 ; ++i )
+        {
+            boxVertexes[i] = Vector(3);
+            vector<int> bitVec = get_bits( i );
+            int vSize = bitVec.size();
+            cout << "bitVec #" << i + 1 << " : [ ";
+            /* Print path vector to console */
+            std::copy(bitVec.begin(), bitVec.end(), std::ostream_iterator<int>(std::cout, " "));
+            cout << "]" << endl;
+
+            if (bitVec[vSize-1])
+                boxVertexes[i][0] = boxCenterPos[0] + boxSideSizes[0] / 2;
+            else
+                boxVertexes[i][0] = boxCenterPos[0] - boxSideSizes[0] / 2;
+            
+            if (bitVec[vSize-2])
+                boxVertexes[i][1] = boxCenterPos[1] + boxSideSizes[1] / 2;
+            else
+                boxVertexes[i][1] = boxCenterPos[1] - boxSideSizes[1] / 2;   
+            
+            if (bitVec[vSize-3])
+                boxVertexes[i][2] = boxCenterPos[2] + boxSideSizes[2] / 2;
+            else
+                boxVertexes[i][2] = boxCenterPos[2] - boxSideSizes[2] / 2;
+        }
+        
+        cout << "Operational space vertexes:" << endl;
+        for (int i = 0 ; i<8 ; ++i)
+        {
+            cout << "Vertex #" << i+1 << ": [   ";
+            for ( int j = 0 ; j < 3 ; ++j )
+            {
+                cout << boxVertexes[i][j] << "    " ;
+            }
+            cout << "]" << endl;
+        }
+        
+        // Check reachability for each vertex
+        Vector xdhat, odhat, qdhat;     // Response vectors
+        for ( int i = 0 ; i < 8 ; ++i )
+        {
+            isOk = icart->askForPosition(boxVertexes[i],xdhat,odhat,qdhat);
+        }
+
+        if ( isOk == 0 )        // Abort!
+        {
+            printf("Error: At least one box vertex is not reachables!\n");
+            return false;
+        }     
+        
+        // Get desired home position of the other arm NOTE: TBI
+        
+        // Check for potential collisions NOTE: TBI
         
         
         // Print Configuration
@@ -214,6 +332,9 @@ public:
     /************************************************************************/
     bool close()
     {        
+        // Close device
+        clientCartCtrl.close();
+
         // Close ports
         rpcPort.close();
         printf("rpcPort port closed\n");
@@ -256,6 +377,8 @@ public:
 /************************************************************************/
 int main(int argc, char *argv[])
 {
+    YARP_REGISTER_DEVICES(icubmod)
+ 
     Network yarp;
     if (!yarp.checkNetwork())
     {

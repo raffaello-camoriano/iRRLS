@@ -1,7 +1,7 @@
 <module>
     <!-- module's name should match its executable file's name. -->
     <name>RandMotion</name>
-    <description>Receives a Vector and applies a Random Features mapping applying the projections specified in a given file.</description>
+    <description>Moves the end effector of the specified arm at random positions in a specified workspace.</description>
     <version>1.0</version>
 
     <!-- <arguments> can have multiple <param> tags-->
@@ -10,7 +10,16 @@
     <param desc="Robot name" default="icub">robot</param>
     <param desc="Arm side" default="left">armSide</param>
     <param desc="Configuration file" default="RFmapper_config.ini">from</param>
-    
+    <param desc="Size of the workspace box along x" default="0.10">xSideSize</param>
+    <param desc="Size of the workspace box along y" default="0.10">ySideSize</param>
+    <param desc="Size of the workspace box along z" default="0.10">zSideSize</param>
+    <param desc="x coordinate of the workspace center" default="-0.35">xCenter</param>
+    <param desc="y coordinate of the workspace center" default="-0.10">yCenter</param>
+    <param desc="z coordinate of the workspace center" default="0.10">zCenter</param>
+    <param desc="Tentative x coordinate of the home position of the other arm" default="-0.35">xOtherArm</param>
+    <param desc="Tentative x coordinate of the home position of the other arm" default="0.10">yOtherArm</param>
+    <param desc="Tentative x coordinate of the home position of the other arm" default="0.10">zOtherArm</param>
+
     </arguments>
 
     <!-- <authors> can have multiple <author> tags. -->
@@ -34,10 +43,6 @@
 
     </data>
 
-    <dependencies>
-        <computer>
-        </computer>
-    </dependencies>
 
     <!-- specific libraries or header files which are used for development -->
     <development>

@@ -367,22 +367,28 @@ public:
             //----------------------------------
             // performance
 
-//             Bottle& bperf = perf.prepare(); // Get a place to store things.
-//             bperf.clear();  // clear is important - b might be a reused object
-//     
-//             // Compute nMSE and store
-//             //WARNING: "/" operator works like matlab's "\".
-//             nSE += varCols / ( ynew - *resptr )*( ynew - *resptr ) ;   
-// 
-//             gMat2D<T> tmp = nSE  / (updateCount+1);
-//             //copy(nMSE_rec.getData() + i, tmp.getData(), t, nte, 1);
-//             for (int i = 0 ; i < t ; ++i)
-//             {
-//                 bperf.addDouble(tmp(1 , i));
-//             }
-//             
-//             if(verbose) printf("Sending %s:  %s\n", perfType.c_str(), bperf.toString().c_str());
-//             perf.write();
+            Bottle& bperf = perf.prepare(); // Get a place to store things.
+            bperf.clear();  // clear is important - b might be a reused object
+    
+            if (perfType == "nMSE")     // WARNING: The estimated variance could be unreliable...
+            {
+                // Compute nMSE and store
+                //NOTE: In GURLS, "/" operator works like matlab's "\".
+                nSE += varCols / ( ynew - *resptr )*( ynew - *resptr ) ;   
+                gMat2D<T> tmp = nSE  / (updateCount+1);
+                //copy(nMSE_rec.getData() + i, tmp.getData(), t, nte, 1);
+                for (int i = 0 ; i < t ; ++i)
+                {
+                    bperf.addDouble(tmp(1 , i));
+                }
+            }
+            else if (perfType == "RMSE")
+            {
+                // WARNING: TBI
+            }
+            
+            if(verbose) printf("Sending %s measurement: %s\n", perfType.c_str(), bperf.toString().c_str());
+            perf.write();
 
             //-----------------------------------
             //             Update

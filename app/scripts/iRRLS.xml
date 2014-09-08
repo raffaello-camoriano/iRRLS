@@ -26,6 +26,13 @@
         <geometry>(Pos (x 610) (y 10))</geometry>
     </module>
     <module>
+        <name>RandMotion</name>
+        <parameters></parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry></geometry>
+    </module>    
+    <module>
         <name>Synchronizer</name>
         <parameters></parameters>
         <node>localhost</node>

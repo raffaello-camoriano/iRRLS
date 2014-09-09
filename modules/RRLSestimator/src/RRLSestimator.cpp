@@ -387,7 +387,7 @@ public:
                 //copy(nMSE_rec.getData() + i, tmp.getData(), t, nte, 1);
                 for (int i = 0 ; i < t ; ++i)
                 {
-                    bperf.addDouble(tmp(1 , i));
+                    bperf.addDouble(tmp(0 , i));
                 }
             }
             else if (perfType == "RMSE")
@@ -396,7 +396,7 @@ public:
                 MSE = ( MSE * (updateCount-1) + ( ynew - *resptr )*( ynew - *resptr ) ) / updateCount;
                 for (int i = 0 ; i < t ; ++i)
                 {
-                    bperf.addDouble(sqrt(MSE(1 , i)));
+                    bperf.addDouble(sqrt(MSE(0 , i)));
                 }                
             }
             else if (perfType == "MSE")
@@ -407,7 +407,7 @@ public:
                 MSE = ( MSE * (updateCount-1) + ( ynew - *resptr )*( ynew - *resptr ) ) / updateCount;
                 for (int i = 0 ; i < t ; ++i)
                 {
-                    bperf.addDouble(MSE(1 , i));
+                    bperf.addDouble(MSE(0 , i));
                 }
                 
             }

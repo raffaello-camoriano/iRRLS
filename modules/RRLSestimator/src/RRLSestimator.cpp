@@ -61,13 +61,16 @@ protected:
     int pretrain;               // Preliminary batch training required
     string pretrainFile;        // Preliminary batch training file
     int n_pretr;                // Number of pretraining samples
-    long unsigned int updateCount ;
+    uint64_t updateCount ;
        
     gMat2D<T> trainSet;    
     gMat2D<T> Xtr;    
     gMat2D<T> ytr;    
     RecursiveRLSCholUpdateWrapper<T> estimator;
     gMat2D<T> varCols;          // Matrix containing the column-wise variances computed on the training set
+    
+    gMat2D<T> nSE;
+    gMat2D<T> MSE;
 
 
 public:
@@ -174,6 +177,9 @@ public:
         attach(rpcPort);
 
         srand(static_cast<unsigned int>(time(NULL)));
+
+        nSE(gMat2D<T>::zeros(1, t));          //nSE
+        MSE(gMat2D<T>::zeros(1, t));          //MSE
 
         updateCount = 0;
         
@@ -300,7 +306,7 @@ public:
     /************************************************************************/
     bool updateModule()
     {
-        updateCount++;
+        ++updateCount;
 
         // DEBUG
 
@@ -314,7 +320,6 @@ public:
         gVec<T> ynew_v(t);
         //gMat2D<T> yte_pred(nte,t);
         gMat2D<T> *resptr = 0;
-        gMat2D<T> nSE(gMat2D<T>::zeros(1, t));
         
         // Wait for input feature vector
         if(verbose) cout << "Expecting input vector" << endl;
@@ -375,7 +380,8 @@ public:
                 // Compute nMSE and store
                 //NOTE: In GURLS, "/" operator works like matlab's "\".
                 nSE += varCols / ( ynew - *resptr )*( ynew - *resptr ) ;   
-                gMat2D<T> tmp = nSE  / (updateCount+1);
+                //gMat2D<T> tmp = nSE  / (updateCount + 1);
+                gMat2D<T> tmp = nSE  / (updateCount);   // WARNING: Check
                 //copy(nMSE_rec.getData() + i, tmp.getData(), t, nte, 1);
                 for (int i = 0 ; i < t ; ++i)
                 {
@@ -385,6 +391,23 @@ public:
             else if (perfType == "RMSE")
             {
                 // WARNING: TBI
+                MSE = ( MSE * (updateCount-1) + ( ynew - *resptr )*( ynew - *resptr ) ) / updateCount;
+                for (int i = 0 ; i < t ; ++i)
+                {
+                    bperf.addDouble(sqrt(MSE(1 , i)));
+                }                
+            }
+            else if (perfType == "MSE")
+            {
+                // WARNING: TBI
+                //Compute MSE and store
+                
+                MSE = ( MSE * (updateCount-1) + ( ynew - *resptr )*( ynew - *resptr ) ) / updateCount;
+                for (int i = 0 ; i < t ; ++i)
+                {
+                    bperf.addDouble(MSE(1 , i));
+                }
+                
             }
             
             if(verbose) printf("Sending %s measurement: %s\n", perfType.c_str(), bperf.toString().c_str());

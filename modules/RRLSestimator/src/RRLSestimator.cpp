@@ -178,8 +178,8 @@ public:
 
         srand(static_cast<unsigned int>(time(NULL)));
 
-        nSE(gMat2D<T>::zeros(1, t));          //nSE
-        MSE(gMat2D<T>::zeros(1, t));          //MSE
+        nSE = gMat2D<T>::zeros(1, t);          //nSE
+        MSE = gMat2D<T>::zeros(1, t);          //MSE
 
         updateCount = 0;
         

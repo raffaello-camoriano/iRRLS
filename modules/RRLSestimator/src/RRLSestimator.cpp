@@ -178,7 +178,9 @@ public:
 
         srand(static_cast<unsigned int>(time(NULL)));
 
+        nSE.resize(1,t);
         nSE = gMat2D<T>::zeros(1, t);          //nSE
+        MSE.resize(1,t);
         MSE = gMat2D<T>::zeros(1, t);          //MSE
 
         updateCount = 0;

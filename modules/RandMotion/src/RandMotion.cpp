@@ -183,18 +183,18 @@ public:
         bool isOk = 1;
         boxCenterPos.resize(3);
         
-        if (rf.check("xCenter"))
-            boxCenterPos[0] = rf.find("xCenter").asDouble();
+        if (rf.findGroup(armSide).check("xCenter"))
+            boxCenterPos[0] = rf.findGroup(armSide).find("xCenter").asDouble();
         else
             isOk = 0;
         
-        if (rf.check("yCenter") && isOk)
-            boxCenterPos[1] = rf.find("yCenter").asDouble();
+        if (rf.findGroup(armSide).check("yCenter") && isOk)
+            boxCenterPos[1] = rf.findGroup(armSide).find("yCenter").asDouble();
         else
             isOk = 0;
         
-        if (rf.check("zCenter") && isOk)
-            boxCenterPos[2] = rf.find("zCenter").asDouble();
+        if (rf.findGroup(armSide).check("zCenter") && isOk)
+            boxCenterPos[2] = rf.findGroup(armSide).find("zCenter").asDouble();
         else
             isOk = 0;
         
@@ -208,18 +208,18 @@ public:
         
         // Get bounding box's dimensions (w.r.t. x, y,  z axes)
         boxSideSizes.resize(3);
-        if (rf.check("xSideSize"))
-            boxSideSizes[0] = rf.find("xSideSize").asDouble();
+        if (rf.findGroup(armSide).check("xSideSize"))
+            boxSideSizes[0] = rf.findGroup(armSide).find("xSideSize").asDouble();
         else
             isOk = 0;
         
-        if (rf.check("ySideSize") && isOk)
-            boxSideSizes[1] = rf.find("ySideSize").asDouble();
+        if (rf.findGroup(armSide).check("ySideSize") && isOk)
+            boxSideSizes[1] = rf.findGroup(armSide).find("ySideSize").asDouble();
         else
             isOk = 0;
         
-        if (rf.check("zSideSize") && isOk)
-            boxSideSizes[2] = rf.find("zSideSize").asDouble();
+        if (rf.findGroup(armSide).check("zSideSize") && isOk)
+            boxSideSizes[2] = rf.findGroup(armSide).find("zSideSize").asDouble();
         else
             isOk = 0;
         

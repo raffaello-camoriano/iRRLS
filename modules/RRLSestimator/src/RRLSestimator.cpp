@@ -266,7 +266,7 @@ public:
             catch (gException& e)
             {
                 cout << e.getMessage() << endl;
-                //return false;   // NOTE: May be worth to set up specific error return values
+                return false;   // Terminate program. NOTE: May be worth to set up specific error return values
             }
         }
         

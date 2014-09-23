@@ -40,13 +40,13 @@
         <geometry>(Pos (x 328) (y 118.9))</geometry>
     </module>
     <connection>
-        <from external="true">/icub/left_arm/state:o</from>
+        <from external="true">/icub/right_arm/state:o</from>
         <to>/Synchronizer/pos:i</to>
         <protocol>tcp+recv.portmonitor+script.lua+context.iRRLS+file.signalsMask</protocol>
         <geometry>(Pos ((x 99.5) (y 107.5)) ((x 185) (y 78)) ((x 329) (y 137))  )</geometry>
     </connection>
     <connection>
-        <from external="true">/icub/left_arm/analog:o</from>
+        <from external="true">/icub/right_arm/analog:o</from>
         <to>/Synchronizer/ft:i</to>
         <protocol>tcp</protocol>
         <geometry>(Pos ((x 250.5) (y 197)) ((x 193) (y 232)) ((x 329) (y 162))  )</geometry>

@@ -61,6 +61,7 @@ protected:
     int pretrain;               // Preliminary batch training required
     string pretrainFile;        // Preliminary batch training file
     int n_pretr;                // Number of pretraining samples
+    string pretr_type;          // Pretraining type: 'fromFile' or 'fromStream'
     uint64_t updateCount ;
        
     gMat2D<T> trainSet;    
@@ -141,7 +142,12 @@ public:
         {            
             // Set preliminary batch training file path
             pretrainFile = rf.check("pretrainFile",Value("icubdyn.dat")).asString();
+            
             n_pretr = rf.check("n_pretr",Value("2")).asInt();
+            
+            pretr_type = rf.check("pretr_type" , Value("fromStream")).asString();
+            if ((pretr_type != "fromFile") && (pretr_type != "fromFile"))
+                pretr_type == "fromFile";
         }
         
         // Print Configuration
@@ -153,7 +159,9 @@ public:
         if ( pretrain == 1 )
         {
             printf("Pretraining requested\n");
-            printf("Pretraining file name set to: %s\n", pretrainFile.c_str());
+            printf("Pretraining type: %s\n", pretr_type.c_str());
+            if (pretr_type == "fromFile")
+                printf("Pretraining file name set to: %s\n", pretrainFile.c_str());
             printf("Number of pretraining samples: %d\n", n_pretr);
         }
         cout << "-------------------------" << endl << endl;
@@ -176,8 +184,10 @@ public:
         // Attach rpcPort to the respond() method
         attach(rpcPort);
 
+        // Initialize random number generator
         srand(static_cast<unsigned int>(time(NULL)));
 
+        // Initialize error structures
         nSE.resize(1,t);
         nSE = gMat2D<T>::zeros(1, t);          //nSE
         MSE.resize(1,t);
@@ -186,88 +196,176 @@ public:
         updateCount = 0;
         
         //------------------------------------------
-        //         Pre-training from file
+        //         Pre-training
         //------------------------------------------
 
         if ( pretrain == 1 )
         {
-            string trainFilePath = rf.getContextPath() + "/data/" + pretrainFile;
-            
-            try
+            if ( pretr_type == "fromFile" )
             {
-                // Load data files
-                cout << "Loading data file..." << endl;
-                trainSet.readCSV(trainFilePath);
-
-                cout << "File " + trainFilePath + " successfully read!" << endl;
-                cout << "trainSet: " << trainSet << endl;
-                cout << "n_pretr = " << n_pretr << endl;
-                cout << "d = " << d << endl;
-
-                //WARNING: Add matrix dimensionality check!
-
-                // Resize Xtr
-                Xtr.resize( n_pretr , d );
+                //------------------------------------------
+                //         Pre-training from file
+                //------------------------------------------
+                string trainFilePath = rf.getContextPath() + "/data/" + pretrainFile;
                 
-                // Initialize Xtr
-                //Xtr.submatrix(trainSet , n_pretr , d);
-                Xtr.submatrix(trainSet , 0 , 0);
-                cout << "Xtr initialized!" << endl << Xtr << endl;
-
-                // Resize ytr
-                ytr.resize( n_pretr , t );
-                cout << "ytr resized!" << endl;
-                
-                // Initialize ytr
-                gVec<T> tmpCol(trainSet.rows());
-                cout << "tmpCol" << tmpCol << endl;
-                for ( int i = 0 ; i < t ; ++i )
+                try
                 {
-                    cout << "trainSet(d + i): " << trainSet(d + i) << endl;
-                    tmpCol = trainSet(d + i);
-                    gVec<T> tmpCol1(n_pretr);
+                    // Load data files
+                    cout << "Loading data file..." << endl;
+                    trainSet.readCSV(trainFilePath);
 
-                    //cout << tmpCol.subvec( (unsigned int) n_pretr ,  (unsigned int) 0);       // WARNING: Fixed in latest GURLS version
+                    cout << "File " + trainFilePath + " successfully read!" << endl;
+                    cout << "trainSet: " << trainSet << endl;
+                    cout << "n_pretr = " << n_pretr << endl;
+                    cout << "d = " << d << endl;
 
-                    gVec<T> locs(n_pretr);
+                    //WARNING: Add matrix dimensionality check!
+
+                    // Resize Xtr
+                    Xtr.resize( n_pretr , d );
+                    
+                    // Initialize Xtr
+                    //Xtr.submatrix(trainSet , n_pretr , d);
+                    Xtr.submatrix(trainSet , 0 , 0);
+                    cout << "Xtr initialized!" << endl << Xtr << endl;
+
+                    // Resize ytr
+                    ytr.resize( n_pretr , t );
+                    cout << "ytr resized!" << endl;
+                    
+                    // Initialize ytr
+                    gVec<T> tmpCol(trainSet.rows());
+                    cout << "tmpCol" << tmpCol << endl;
+                    for ( int i = 0 ; i < t ; ++i )
+                    {
+                        cout << "trainSet(d + i): " << trainSet(d + i) << endl;
+                        tmpCol = trainSet(d + i);
+                        gVec<T> tmpCol1(n_pretr);
+
+                        //cout << tmpCol.subvec( (unsigned int) n_pretr ,  (unsigned int) 0);       // WARNING: Fixed in latest GURLS version
+
+                        gVec<T> locs(n_pretr);
+                        for (int j = 0 ; j < n_pretr ; ++j)
+                            locs[j] = j;
+                        cout << "locs" << locs << endl;
+                        gVec<T>& tmpCol2 = tmpCol.copyLocations(locs);
+                        cout << "tmpCol2" << tmpCol2 << endl;
+                    
+                        //tmpCol1 = tmpCol.subvec( (unsigned int) n_pretr );
+                        //cout << "tmpCol1: " << tmpCol1 << endl;
+                        ytr.setColumn( tmpCol2 , (long unsigned int) i);
+                    }
+                    cout << "ytr initialized!" << endl;
+
+                    // Compute variance for each output on the training set
+                    gMat2D<T> varCols = gMat2D<T>::zeros(1,t);
+                    gVec<T>* sumCols_v = ytr.sum(COLUMNWISE);          // Vector containing the column-wise sum
+                    gMat2D<T> meanCols(sumCols_v->getData(), 1, t, 1); // Matrix containing the column-wise sum
+                    meanCols /= n_pretr;        // Matrix containing the column-wise mean
+                    
+                    if (verbose) cout << "Mean of the output columns: " << endl << meanCols << endl;
+                    
+                    for (int i = 0; i < n_pretr; i++)
+                    {
+                        gMat2D<T> ytri(ytr[i].getData(), 1, t, 1);
+                        varCols += (ytri - meanCols) * (ytri - meanCols); // NOTE: Temporary assignment
+                    }
+                    varCols /= n_pretr;     // Compute variance
+                    if (verbose) cout << "Variance of the output columns: " << endl << varCols << endl;
+
+                    // Initialize model
+                    cout << "Batch pretraining the RLS model with " << n_pretr << " samples." << endl;
+                    estimator.train(Xtr, ytr);
+                }
+                
+                catch (gException& e)
+                {
+                    cout << e.getMessage() << endl;
+                    return false;   // Terminate program. NOTE: May be worth to set up specific error return values
+                }
+            }
+            else if ( pretr_type == "fromStream" )
+            {
+                //------------------------------------------
+                //         Pre-training from stream
+                //------------------------------------------
+                
+                try
+                {
+
+                    cout << "Pretraining from stream started. Listening on port vec:i." << n_pretr << " samples expected." << endl;
+
+                    // Resize Xtr
+                    Xtr.resize( n_pretr , d );
+                    
+                    // Resize ytr
+                    ytr.resize( n_pretr , t );
+                    
+                    // Initialize Xtr
                     for (int j = 0 ; j < n_pretr ; ++j)
-                        locs[j] = j;
-                    cout << "locs" << locs << endl;
-                    gVec<T>& tmpCol2 = tmpCol.copyLocations(locs);
-                    cout << "tmpCol2" << tmpCol2 << endl;
-                   
-                    //tmpCol1 = tmpCol.subvec( (unsigned int) n_pretr );
-                    //cout << "tmpCol1: " << tmpCol1 << endl;
-                    ytr.setColumn( tmpCol1 , (long unsigned int) i);
-                }
-                cout << "ytr initialized!" << endl;
+                    {
+                        // Wait for input feature vector
+                        if(verbose) cout << "Expecting input vector # " << j+1 << endl;
+                        
+                        Bottle *bin = inVec.read();    // blocking call
+                        
+                        if (bin != 0)
+                        {
+                            if(verbose) cout << "Got it!" << endl << bin->toString() << endl;
 
-                // Compute variance for each output on the training set
-                gMat2D<T> varCols = gMat2D<T>::zeros(1,t);
-                gVec<T>* sumCols_v = ytr.sum(COLUMNWISE);          // Vector containing the column-wise sum
-                gMat2D<T> meanCols(sumCols_v->getData(), 1, t, 1); // Matrix containing the column-wise sum
-                meanCols /= n_pretr;        // Matrix containing the column-wise mean
+                            //Store the received sample in gMat2D format for it to be compatible with gurls++
+
+                            for (int i = 0 ; i < bin->size() ; ++i)
+                            {
+                                if ( i < d )
+                                {
+                                    Xtr(j,i) = bin->get(i).asDouble();
+                                }
+                                else if ( (i>=d) && (i<d+t) )
+                                {
+
+                                    ytr(j, i - d ) = bin->get(i).asDouble();
+                                }
+                            }
+                            if(verbose) cout << "Xtr[j]:" << endl << Xtr[j] << endl << "ytr[j]:" << endl << ytr[j] << endl;
+                        
+                            cout << "Xtr(j, d-1): " << Xtr(j, d-1) << endl;
+                            
+                        }
+                        else
+                            --j;        // WARNING: bug while closing with ctrl-c
+                    }
+                    
+                    cout << "Xtr initialized!" << endl;
+                    cout << "ytr initialized!" << endl;
+                        
+                    // Compute variance for each output on the training set
+                    gMat2D<T> varCols = gMat2D<T>::zeros(1,t);
+                    gVec<T>* sumCols_v = ytr.sum(COLUMNWISE);          // Vector containing the column-wise sum
+                    gMat2D<T> meanCols(sumCols_v->getData(), 1, t, 1); // Matrix containing the column-wise sum
+                    meanCols /= n_pretr;        // Matrix containing the column-wise mean
+                    
+                    if (verbose) cout << "Mean of the output columns: " << endl << meanCols << endl;
+                    
+                    for (int i = 0; i < n_pretr; i++)
+                    {
+                        gMat2D<T> ytri(ytr[i].getData(), 1, t, 1);
+                        varCols += (ytri - meanCols) * (ytri - meanCols); // NOTE: Temporary assignment
+                    }
+                    varCols /= n_pretr;     // Compute variance
+                    if (verbose) cout << "Variance of the output columns: " << endl << varCols << endl;
+
+                    // Initialize model
+                    cout << "Batch pretraining the RLS model with " << n_pretr << " samples." << endl;
+                    estimator.train(Xtr, ytr);
+                }
                 
-                if (verbose) cout << "Mean of the output columns: " << endl << meanCols << endl;
-                
-                for (int i = 0; i < n_pretr; i++)
+                catch (gException& e)
                 {
-                    gMat2D<T> ytri(ytr[i].getData(), 1, t, 1);
-                    varCols += (ytri - meanCols) * (ytri - meanCols); // NOTE: Temporary assignment
+                    cout << e.getMessage() << endl;
+                    return false;   // Terminate program. NOTE: May be worth to set up specific error return values
                 }
-                varCols /= n_pretr;     // Compute variance
-                if (verbose) cout << "Variance of the output columns: " << endl << varCols << endl;
-
-                // Initialize model
-                cout << "Batch pretraining the RLS model with " << n_pretr << " samples." << endl;
-                estimator.train(Xtr, ytr);
-            }
-            
-            catch (gException& e)
-            {
-                cout << e.getMessage() << endl;
-                return false;   // Terminate program. NOTE: May be worth to set up specific error return values
-            }
+            }            
         }
         
         return true;

@@ -60,7 +60,6 @@ A module that reads the projections from the configuration file RFmapper.ini and
 using namespace std;
 using namespace yarp::os;
 using namespace yarp::sig;
-//using namespace yarp::dev;
 using namespace yarp::math;
 
 /************************************************************************/
@@ -176,15 +175,6 @@ public:
     {
         string name=rf.find("name").asString().c_str();
         setName(name.c_str());
-
-//         Property config;
-//         config.fromConfigFile(rf.findFile("from").c_str());
-//         Bottle &bGeneral=config.findGroup("general");
-//         if (bGeneral.isNull())
-//         {
-//             printf("Error: group general is missing!\n");
-//             return false;
-//         }
 
         // Set dimensionalities
         d = rf.findGroup("general").check("d",Value(0)).asInt();

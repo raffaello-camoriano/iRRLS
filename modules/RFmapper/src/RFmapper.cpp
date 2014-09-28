@@ -180,7 +180,6 @@ public:
         d = rf.findGroup("general").check("d",Value(0)).asInt();
         t = rf.findGroup("general").check("t",Value(0)).asInt();
         numRF = rf.findGroup("general").check("numRF",Value(0)).asInt();
-        projMat.resize(numRF,d);      // Initialize projections matrix
             
         if (d <= 0 || t <= 0 || numRF <= 0)
         {
@@ -188,6 +187,8 @@ public:
             return false;
         }
 
+        projMat.resize(numRF,d);      // Initialize projections matrix
+        
         // Load precomputed projections from the specified file
         string projFName = rf.findGroup("general").find("proj").toString();
         if (projFName=="")
@@ -281,6 +282,10 @@ public:
             
             wx = projMat * xin;
             
+            cout << "projMat = " << endl << projMat.toString() << endl;
+            cout << "xin = " << xin.toString() << endl;
+            cout << "wx = " << wx.toString() << endl;
+            
             Vector sinwx(numRF);
             Vector coswx(numRF);
             
@@ -289,6 +294,9 @@ public:
                 sinwx[i] = sin(wx[i]);
                 coswx[i] = cos(wx[i]);
             }
+            
+            cout << "sinwx = " << sinwx.toString() << endl;
+            cout << "coswx = " << coswx.toString() << endl;
             
             // Send output features
             Bottle &xout = outFeatures.prepare();
@@ -307,6 +315,9 @@ public:
                     xout.add(vin->get( i - 2*numRF + d ).asDouble());
             }
             outFeatures.write();
+            
+            // Debug
+            cout << "Mapping sent:" << endl << xout.toString() << endl;
         }
         else
         {

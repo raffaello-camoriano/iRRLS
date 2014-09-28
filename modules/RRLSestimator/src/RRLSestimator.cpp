@@ -490,7 +490,6 @@ public:
             }
             else if (perfType == "RMSE")
             {
-                // WARNING: TBI
                 MSE = ( MSE * (updateCount-1) + ( ynew - *resptr )*( ynew - *resptr ) ) / updateCount;
                 for (int i = 0 ; i < t ; ++i)
                 {
@@ -499,7 +498,6 @@ public:
             }
             else if (perfType == "MSE")
             {
-                // WARNING: TBI
                 //Compute MSE and store
                 
                 MSE = ( MSE * (updateCount-1) + ( ynew - *resptr )*( ynew - *resptr ) ) / updateCount;

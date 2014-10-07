@@ -19,8 +19,10 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <iomanip>
 #include <string>
+#include <yarp/os/Time.h>
 
 #include "gurls++/recrlswrapperchol.h"
 #include "gurls++/rlsprimal.h"
@@ -58,21 +60,23 @@ protected:
     int d;
     int t;
     string perfType;
+    int savedPerfNum;           // Number of saved performance measurements
+    int numPred;                // Number of saved predictions to peform before module closure
     int pretrain;               // Preliminary batch training required
     string pretrainFile;        // Preliminary batch training file
     int n_pretr;                // Number of pretraining samples
     string pretr_type;          // Pretraining type: 'fromFile' or 'fromStream'
-    uint64_t updateCount ;
-       
+    long unsigned int updateCount;      // Prediciton number counter
+    int experimentCount;
+    
     gMat2D<T> trainSet;    
     gMat2D<T> Xtr;    
     gMat2D<T> ytr;    
     RecursiveRLSCholUpdateWrapper<T> estimator;
     gMat2D<T> varCols;          // Matrix containing the column-wise variances computed on the training set
     
-    gMat2D<T> nSE;
-    gMat2D<T> MSE;
-
+    gMat2D<T> error;
+    gMat2D<T> storedError;      // Contains the first numErr computed errors
 
 public:
     /************************************************************************/
@@ -109,7 +113,7 @@ public:
     }
 
     bool configure(ResourceFinder &rf)
-    {
+    {        
         string name=rf.find("name").asString().c_str();
         setName(name.c_str());
         
@@ -129,11 +133,25 @@ public:
         // Set perf type
         perfType = rf.check("perf",Value("RMSE")).asString();
         
-        if ( perfType != "RMSE" )
+        if ( perfType != "MSE" || perfType != "RMSE" || perfType != "nMSE" )
         {
             printf("Error: Inconsistent performance measure! Set to RMSE.\n");
             perfType = "RMSE";
         }
+        
+        // Set number of saved performance measurements
+        numPred  = rf.check("numPred",Value("-1")).asInt();
+        
+        // Set number of saved performance measurements
+        savedPerfNum = rf.check("savedPerfNum",Value("0")).asInt();
+        if (savedPerfNum > numPred)
+        {
+            savedPerfNum = numPred;
+            cout << "Warning: savedPerfNum > numPred, setting savedPerfNum = numPred" << endl;
+        }
+        
+        //experimentCount = rf.check("experimentCount",Value("0")).asInt();
+        experimentCount = rf.find("experimentCount").asInt();
         
         // Set preliminary batch training preferences
         pretrain = rf.check("pretrain",Value("0")).asInt();
@@ -153,6 +171,7 @@ public:
         // Print Configuration
         cout << endl << "-------------------------" << endl;
         cout << "Configuration parameters:" << endl << endl;
+        cout << "experimentCount = " << experimentCount << endl;
         cout << "d = " << d << endl;
         cout << "t = " << t << endl;
         cout << "perf = " << perfType << endl;
@@ -188,10 +207,14 @@ public:
         srand(static_cast<unsigned int>(time(NULL)));
 
         // Initialize error structures
-        nSE.resize(1,t);
-        nSE = gMat2D<T>::zeros(1, t);          //nSE
-        MSE.resize(1,t);
-        MSE = gMat2D<T>::zeros(1, t);          //MSE
+        error.resize(1,t);
+        error = gMat2D<T>::zeros(1, t);          //
+        
+        if (savedPerfNum > 0)
+        {
+            storedError.resize(savedPerfNum,t);
+            storedError = gMat2D<T>::zeros(savedPerfNum, t);          //MSE            
+        }
 
         updateCount = 0;
         
@@ -292,7 +315,6 @@ public:
                 
                 try
                 {
-
                     cout << "Pretraining from stream started. Listening on port vec:i." << n_pretr << " samples expected." << endl;
 
                     // Resize Xtr
@@ -314,7 +336,6 @@ public:
                             if(verbose) cout << "Got it!" << endl << bin->toString() << endl;
 
                             //Store the received sample in gMat2D format for it to be compatible with gurls++
-
                             for (int i = 0 ; i < bin->size() ; ++i)
                             {
                                 if ( i < d )
@@ -323,14 +344,10 @@ public:
                                 }
                                 else if ( (i>=d) && (i<d+t) )
                                 {
-
                                     ytr(j, i - d ) = bin->get(i).asDouble();
                                 }
                             }
                             if(verbose) cout << "Xtr[j]:" << endl << Xtr[j] << endl << "ytr[j]:" << endl << ytr[j] << endl;
-                        
-                            cout << "Xtr(j, d-1): " << Xtr(j, d-1) << endl;
-                            
                         }
                         else
                             --j;        // WARNING: bug while closing with ctrl-c
@@ -407,6 +424,12 @@ public:
     bool updateModule()
     {
         ++updateCount;
+        
+        if (updateCount > numPred)
+        {
+            cout << "Specified number of predictions reached. Shutting down the module." << endl;
+            return false;
+        }
 
         // DEBUG
 
@@ -418,7 +441,6 @@ public:
         gMat2D<T> ynew(1,t);
         gVec<T> Xnew_v(d);
         gVec<T> ynew_v(t);
-        //gMat2D<T> yte_pred(nte,t);
         gMat2D<T> *resptr = 0;
         
         // Wait for input feature vector
@@ -447,7 +469,6 @@ public:
     
             if(verbose) cout << "Xnew: " << endl << Xnew << endl;
             if(verbose) cout << "ynew: " << endl << ynew.rows() << " x " << ynew.cols() << endl;
-
             if(verbose) cout<< ynew << endl;
 
             //-----------------------------------
@@ -479,10 +500,8 @@ public:
             {
                 // Compute nMSE and store
                 //NOTE: In GURLS, "/" operator works like matlab's "\".
-                nSE += varCols / ( ynew - *resptr )*( ynew - *resptr ) ;   
-                //gMat2D<T> tmp = nSE  / (updateCount + 1);
-                gMat2D<T> tmp = nSE  / (updateCount);   // WARNING: Check
-                //copy(nMSE_rec.getData() + i, tmp.getData(), t, nte, 1);
+                error += varCols / ( ynew - *resptr )*( ynew - *resptr ) ;   
+                gMat2D<T> tmp = error  / (updateCount);   // WARNING: Check
                 for (int i = 0 ; i < t ; ++i)
                 {
                     bperf.addDouble(tmp(0 , i));
@@ -490,27 +509,62 @@ public:
             }
             else if (perfType == "RMSE")
             {
-                MSE = ( MSE * (updateCount-1) + ( ynew - *resptr )*( ynew - *resptr ) ) / updateCount;
-                for (int i = 0 ; i < t ; ++i)
+                gMat2D<T> tmp(1,t);
+                tmp = ( ynew - *resptr )*( ynew - *resptr );
+                
+                //error = ( error * (updateCount-1) + sqrt(( ynew - *resptr )*( ynew - *resptr )) ) / updateCount;
+                
+                error = error * (updateCount-1);
+                for (int i = 0 ; i < ynew.cols() ; ++i)
+                    error(0,i) += sqrt(tmp(0,i));
+                error = error / updateCount;
+                
+/*                for (int i = 0 ; i < t ; ++i)
                 {
                     bperf.addDouble(sqrt(MSE(0 , i)));
-                }                
+                }      */
+
+                // WARNING: Temporary avg RMSE computation
+                
+                bperf.addDouble( (error(0 , 0) + error(0 , 1) + error(0 , 2))/ 3.0);    // Average MSE on forces
+                bperf.addDouble( (error(0 , 3) + error(0 , 4) + error(0 , 5))/ 3.0);    // Average MSE on torques
             }
             else if (perfType == "MSE")
             {
                 //Compute MSE and store
                 
-                MSE = ( MSE * (updateCount-1) + ( ynew - *resptr )*( ynew - *resptr ) ) / updateCount;
+                error = ( error * (updateCount-1) + ( ynew - *resptr )*( ynew - *resptr ) ) / updateCount;
                 for (int i = 0 ; i < t ; ++i)
                 {
-                    bperf.addDouble(MSE(0 , i));
+                    bperf.addDouble(error(0 , i));
                 }
                 
             }
             
+            // Error storage matrix management
+            // Update error storage matrix
+            if (updateCount <= savedPerfNum)
+            {
+                gVec<T> errRow = error[0];
+                storedError.setRow( errRow, updateCount-1);
+            }
+            
+            // Save to CSV file
+            if (updateCount == savedPerfNum)    
+            {
+                
+                std::ostringstream ss;
+                ss << experimentCount;
+                
+                //string tmp(std::to_string(experimentCount));
+                storedError.saveCSV("storedError" + ss.rdbuf()->str() + ".csv");
+                cout << "Error measurement matrix saved." << endl;
+            }
+            
+            // Write computed error to output port
             if(verbose) printf("Sending %s measurement: %s\n", perfType.c_str(), bperf.toString().c_str());
             perf.write();
-
+            
             //-----------------------------------
             //             Update
             //-----------------------------------
@@ -524,10 +578,12 @@ public:
             if(verbose) cout << "Update completed" << endl;            
         }
 
+        if ( numPred >=0 && (updateCount == numPred) )
+        {
+            cout << "Specified number of predictions reached. Shutting down the module." << endl;
+            return false;
+        }
         return true;
-        
-
-    
     }
 
     /************************************************************************/
@@ -535,7 +591,7 @@ public:
     {
         inVec.interrupt();
         printf("inVec interrupted\n");
-        
+
         pred.interrupt();
         printf("pred interrupted\n");
         
@@ -548,7 +604,6 @@ public:
         return true;
     }
 };
-
 
 /************************************************************************/
 int main(int argc, char *argv[])
@@ -567,8 +622,31 @@ int main(int argc, char *argv[])
     rf.setDefault("name","RRLSestimator");
     rf.configure(argc,argv);
 
-    RRLSestimator mod;
-    return mod.runModule(rf);
+    // Set number of experiments
+    int numPred = rf.check("numPred",Value("-1")).asInt();    
+    int numExperiments = rf.check("numExperiments",Value("1")).asInt();
+    if (numPred == -1)
+        numExperiments = 1;
+    
+    // Run the module 'numExperiments' times
+    for (int experimentCount = 1 ; experimentCount <= numExperiments ; ++experimentCount )
+    {
+        ResourceFinder rf_tmp(rf);
+
+        RRLSestimator mod;
+        rf_tmp.setDefault("experimentCount" , experimentCount);
+        cout << "Experiment " << experimentCount << " started." << endl;
+        int check = mod.runModule(rf_tmp);
+        
+        if (check != 0)
+        {
+            cout << "Experiment " << experimentCount << " aborted. Shutting down." << endl;
+            break;
+        }
+        cout << "Experiment " << experimentCount << " completed successfully." << endl;
+    }
+
+    return 0;
 }
 
 //-------------------------------------------------------------------------------------------------------------------------

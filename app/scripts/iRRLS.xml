@@ -39,6 +39,27 @@
         <prefix></prefix>
         <geometry>(Pos (x 328) (y 118.9))</geometry>
     </module>
+    <module>
+        <name>yarpscope</name>
+        <parameters>--xml yarpscope_avgRMSE</parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry></geometry>
+    </module>
+    <module>
+        <name>yarpscope</name>
+        <parameters>--xml yarpscope_forces_out</parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry></geometry>
+    </module>
+    <module>
+        <name>yarpscope</name>
+        <parameters>--xml yarpscope_torques_out</parameters>
+        <node>localhost</node>
+        <prefix></prefix>
+        <geometry></geometry>
+    </module>    
     <connection>
         <from external="true">/icub/right_arm/state:o</from>
         <to>/Synchronizer/pos:i</to>
@@ -63,7 +84,7 @@
         <protocol>tcp</protocol>
         <geometry>(Pos ((x 919.5) (y 156)) ((x 833) (y 155)) ((x 1027) (y 157))  )</geometry>
     </connection>
-    <connection>
+    <connection persist="true">
         <from>/RFmapper/features:o</from>
         <to>/RRLSestimator/vec:i</to>
         <protocol>tcp</protocol>

@@ -382,7 +382,11 @@ public:
                     cout << e.getMessage() << endl;
                     return false;   // Terminate program. NOTE: May be worth to set up specific error return values
                 }
-            }            
+            }
+            
+            // Print detailed pretraining information
+            if (verbose) 
+                estimator.getOpt().printAll();
         }
         
         return true;

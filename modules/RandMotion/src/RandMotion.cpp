@@ -66,6 +66,8 @@ protected:
     // Data
     string                      armSide;
     string                      robot;
+    int                         verbose;
+
     Vector                      boxCenterPos;   // Position of the box's center [ xCenter, yCenter, zCenter ]
     Vector                      boxSideSizes;   // Dimensions of the box [ xSize, ySize, zSize ]
     vector<Vector>              boxVertexes;    // vector containing the box vertexes
@@ -84,13 +86,17 @@ protected:
     
     void handToCenter()
     {
+        if (verbose) cout << "handToCenter() called" << endl;
+
         Vector xd(3)/*, od(4)*/; // Target position
         
         xd[0]= boxCenterPos[0] + Rand::scalar( -boxSideSizes[0] , boxSideSizes[0] );
         xd[1]= boxCenterPos[1] + Rand::scalar( -boxSideSizes[1] , boxSideSizes[1] );
         xd[2]= boxCenterPos[2] + Rand::scalar( -boxSideSizes[2] , boxSideSizes[2] );
-    
-    
+
+        if (verbose) cout << "Target position: " << xd.toString() << endl;
+
+
          //Target orientation
 //         Vector oy(4), ox(4);
 // 
@@ -106,10 +112,18 @@ protected:
         icart->goToPoseSync(xd,od);   // send request and wait for reply
         icart->waitMotionDone(0.04);*/
 
-        double randDuration = Rand::scalar( 3.0 , 7.0 );
+        double randDuration = Rand::scalar( 3.0 , 7.0 );    //TODO: minduration, maxduration. NOTE: set minimum hard-coded threshold
 
-        icart->goToPositionSync(xd , randDuration);   // send request and wait for reply
-        icart->waitMotionDone(0.04);
+        if (verbose) cout << "Motion duration: " << randDuration << " secs" << endl;
+
+        bool isok = icart->goToPositionSync(xd , randDuration);   // send request and wait for reply
+        if (verbose) cout << "goToPositionSync cmd issued" << endl;
+        if (!isok)  cout << "Controller answer: Failure!" << endl;
+
+        isok = icart->waitMotionDone(0.1);
+        if (!isok)  cout << "waitMotionDone: Failure!" << endl;
+        else if (verbose) cout << "goToPositionSync cmd completed" << endl;\
+
         return;
     }
     
@@ -158,7 +172,9 @@ public:
         string name=rf.find("name").asString().c_str();
         setName(name.c_str());
 
-        
+        // Get verbosity option
+        verbose = rf.check("verbose",Value(0)).asInt();
+
         // Get robot name
         robot = rf.find("robot").toString();
         if (robot=="")
@@ -325,7 +341,9 @@ public:
 
         // Attach rpcPort to the respond() method
         attach(rpcPort);
-        
+
+        printf("rpcPort attached to respond()\n");
+
         return true;
     }
 
@@ -357,6 +375,8 @@ public:
     /************************************************************************/
     bool updateModule()
     {
+        if (verbose) cout << "updateModule() called" << endl;
+
         handToCenter();
         
         return true;

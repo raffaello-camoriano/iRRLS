@@ -41,32 +41,25 @@
     </module>
     <module>
         <name>yarpscope</name>
-        <parameters>--xml yarpscope_avgRMSE.xml</parameters>
+        <parameters>--xml yarpscope_avgRMSE</parameters>
         <node>localhost</node>
         <prefix></prefix>
         <geometry></geometry>
     </module>
     <module>
         <name>yarpscope</name>
-        <parameters>--xml yarpscope_forces_out.xml</parameters>
+        <parameters>--xml yarpscope_forces_out</parameters>
         <node>localhost</node>
         <prefix></prefix>
         <geometry></geometry>
     </module>
     <module>
         <name>yarpscope</name>
-        <parameters>--xml yarpscope_torques_out.xml</parameters>
+        <parameters>--xml yarpscope_torques_out</parameters>
         <node>localhost</node>
         <prefix></prefix>
         <geometry></geometry>
-    </module>
-    <module>
-        <name>iCubGui</name>
-        <parameters></parameters>
-        <node>localhost</node>
-        <prefix></prefix>
-        <geometry></geometry>
-    </module>       
+    </module>    
     <connection>
         <from external="true">/icub/right_arm/state:o</from>
         <to>/Synchronizer/pos:i</to>
@@ -97,10 +90,4 @@
         <protocol>tcp</protocol>
         <geometry>(Pos ((x 1019) (y 310.5)) ((x 1027) (y 157)) ((x 1032) (y 464))  )</geometry>
     </connection>
-    <connection persist="true">
-        <from>/icub/right_arm/state:o</from>
-        <to>/iCubGui/right_arm:i</to>
-        <protocol>tcp</protocol>
-        <geometry></geometry>
-    </connection>  
 </application>

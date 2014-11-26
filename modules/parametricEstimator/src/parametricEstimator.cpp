@@ -126,11 +126,11 @@ public:
         
         if (d <= 0 || t <= 0 )
         {
-            printf("Error: Inconsistent dimensionalities!\n");
+            printf("Error: Inconsistent feature or output dimensionalities!\n");
             return false;
         }
         
-        // Set perf type
+        // Set perf type WARNING: perf types should be defined as separate sister classes
         perfType = rf.check("perf",Value("RMSE")).asString();
         
         if ( perfType != "MSE" && perfType != "RMSE" && perfType != "nMSE" )
@@ -153,21 +153,6 @@ public:
         //experimentCount = rf.check("experimentCount",Value("0")).asInt();
         experimentCount = rf.find("experimentCount").asInt();
         
-        // Set preliminary batch training preferences
-        pretrain = rf.check("pretrain",Value("0")).asInt();
-        
-        if ( pretrain == 1 )
-        {            
-            // Set preliminary batch training file path
-            pretrainFile = rf.check("pretrainFile",Value("icubdyn.dat")).asString();
-            
-            n_pretr = rf.check("n_pretr",Value("2")).asInt();
-            
-            pretr_type = rf.check("pretr_type" , Value("fromStream")).asString();
-            if ((pretr_type != "fromFile") && (pretr_type != "fromFile"))
-                pretr_type == "fromFile";
-        }
-        
         // Print Configuration
         cout << endl << "-------------------------" << endl;
         cout << "Configuration parameters:" << endl << endl;
@@ -175,14 +160,6 @@ public:
         cout << "d = " << d << endl;
         cout << "t = " << t << endl;
         cout << "perf = " << perfType << endl;
-        if ( pretrain == 1 )
-        {
-            printf("Pretraining requested\n");
-            printf("Pretraining type: %s\n", pretr_type.c_str());
-            if (pretr_type == "fromFile")
-                printf("Pretraining file name set to: %s\n", pretrainFile.c_str());
-            printf("Number of pretraining samples: %d\n", n_pretr);
-        }
         cout << "-------------------------" << endl << endl;
        
         // Open ports

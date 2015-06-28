@@ -27,7 +27,7 @@
 require("yarp")
 
 -- Parameters
-periodFactor = 10
+periodFactor = 9
 i = 0
 
 PortMonitor.create = function()
